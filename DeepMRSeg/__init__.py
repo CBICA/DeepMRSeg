@@ -1,1 +1,1 @@
-#print("Init DeepMRSeg")
+print("Init DeepMRSeg")
