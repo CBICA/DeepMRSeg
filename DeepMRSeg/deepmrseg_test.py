@@ -16,11 +16,12 @@ import sys as _sys
 
 import tensorflow as _tf
 import numpy as _np
+import platform as _platform
 
 _sys.path.append( _os.path.dirname( _sys.argv[0] ) )
-import pythonUtilities
+from . import pythonUtilities
 
-from data_io import loadrespadsave
+from .data_io import loadrespadsave
 
 ################################################ FUNCTIONS ################################################
 
@@ -301,7 +302,8 @@ def _main( argv ):
 
 	### Specifying the trap signal
 	import signal as _signal
-	_signal.signal( _signal.SIGHUP, signal_handler )
+	if _platform.system() != 'Windows':
+		_signal.signal( _signal.SIGHUP, signal_handler )
 	_signal.signal( _signal.SIGINT, signal_handler )
 	_signal.signal( _signal.SIGTERM, signal_handler )
 
