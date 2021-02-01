@@ -18,7 +18,7 @@ import subprocess as _subprocess
 import nibabel as _nib
 import numpy as _np
 
-import pythonUtilities
+from . import pythonUtilities
 
 ################################################ FUNCTIONS ################################################
 

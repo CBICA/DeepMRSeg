@@ -13,8 +13,8 @@ import tensorflow as _tf
 
 _sys.path.append( _os.path.dirname( _sys.argv[0] ) )
 
-from layers import maxpool_layer, conv_layer
-from layers import conv_layer_resample_v1
+from .layers import maxpool_layer, conv_layer
+from .layers import conv_layer_resample_v1
 
 ################################################ FUNCTIONS ################################################
 

@@ -13,8 +13,8 @@ import numpy as _np
 
 _sys.path.append( _os.path.dirname( _sys.argv[0] ) )
 
-import rescaleimages
-import pythonUtilities
+from . import rescaleimages
+from . import pythonUtilities
 
 ################################################ FUNCTIONS ################################################
 

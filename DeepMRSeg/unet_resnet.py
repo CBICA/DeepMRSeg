@@ -15,7 +15,7 @@ import tensorflow as _tf
 _sys.path.append( _os.path.dirname( _sys.argv[0] ) )
 
 
-from layers import ResUnit_v1, conv_layer_resample_v1
+from .layers import ResUnit_v1, conv_layer_resample_v1
 
 ################################################ FUNCTIONS ################################################
 
