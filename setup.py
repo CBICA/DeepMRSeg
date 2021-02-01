@@ -22,7 +22,7 @@ setuptools.setup(
 	'tensorflow-addons==0.11.2',
 	'numpy~=1.18.4',
 	'dill', 
-	'h5py', 
+	'h5py==2.10.0', 
 	'hyperopt', 
 	'keras',
 	'pandas', 
