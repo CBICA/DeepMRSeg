@@ -32,15 +32,7 @@ setuptools.setup(
 	'seaborn',
     'scipy',
 	'nibabel',
-	#'subprocess',
-	#'getopt',
-	#'signal',
-	#'time',
-	#'sys',
-	#'os',
-	#'csv',
 	'resource'
-	#'shutil'
 	],
 	entry_points = {
     'console_scripts': ['deepmrseg_train=DeepMRSeg.deepmrseg_train:runFromCMD', 'deepmrseg_test=DeepMRSeg.deepmrseg_test:runFromCMD'],
