@@ -528,7 +528,6 @@ def _main( argv ):
 	epoch_val_mael_avg = _tf.keras.metrics.Mean()
 	epoch_val_bcel_avg = _tf.keras.metrics.Mean()
 
-
 	@_tf.function
 	def train_step( x,y ):
 		with _tf.GradientTape() as tape:
@@ -549,6 +548,7 @@ def _main( argv ):
 	@_tf.function
 	def test_step( x,y ):
 		preds_d1,probs_d1,_,_,_,_ = model( x, training=False )
+
 		oh_d1 = get_onehot( y,0,FLAGS.xy_width,FLAGS.num_classes )
 		
 		total_loss_d1, iou_d1, mae_d1, bce_d1 = losses.CombinedLoss( oh_d1,probs_d1,0 )
@@ -636,11 +636,9 @@ def _main( argv ):
 		### Set the learning rate based on the chosen schedule
 		current_lr,last_lr_change_counter = set_lr( epoch,last_lr_change_counter )
 
-
 		# Iterate over the batches of the dataset.
 		for step, (x_batch_train, y_batch_train) in enumerate(train_ds):
 			ttl,tioul,tmael,tbcel = train_step( x_batch_train,y_batch_train )
-
 
 			# Add current batch loss
 			epoch_train_loss_avg.update_state( ttl )
@@ -648,10 +646,10 @@ def _main( argv ):
 			epoch_train_mael_avg.update_state( tmael )
 			epoch_train_bcel_avg.update_state( tbcel )
 
-
 			# IF DISPLAY TRAINING METRICS
 			if i%1000 == 0:
 				timeperiter = (_time.time()-est) / (i+1) * 1000 / 60.
+
 				print( "\t\titerations : %d, time per %d iterations: %.2f mins" % \
 								( i, 1000, timeperiter ) )
 
@@ -741,7 +739,6 @@ def _main( argv ):
 		epoch_train_ioul_avg.reset_states(), epoch_val_ioul_avg.reset_states()
 		epoch_train_mael_avg.reset_states(), epoch_val_mael_avg.reset_states()
 		epoch_train_bcel_avg.reset_states(), epoch_val_bcel_avg.reset_states()
-
 
 	### Remove tmpDir and its contents, if not user defined
 	#IF
