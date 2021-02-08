@@ -9,7 +9,6 @@ __EXEC_NAME__ 	= "losses"
 
 import tensorflow as _tf
 
-ONE = _tf.constant( 1.00 )
 EPS = _tf.constant( 1e-7 )
 
 ################################################ FUNCTIONS ################################################
