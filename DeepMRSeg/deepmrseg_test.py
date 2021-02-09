@@ -18,7 +18,6 @@ import tensorflow as _tf
 import numpy as _np
 import platform as _platform
 
-_sys.path.append( _os.path.dirname( _sys.argv[0] ) )
 from . import pythonUtilities
 
 from .data_io import loadrespadsave

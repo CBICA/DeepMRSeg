@@ -11,8 +11,6 @@ import os as _os
 import sys as _sys
 import numpy as _np
 
-_sys.path.append( _os.path.dirname( _sys.argv[0] ) )
-
 from . import rescaleimages
 from . import pythonUtilities
 
