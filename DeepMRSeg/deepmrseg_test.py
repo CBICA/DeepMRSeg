@@ -507,8 +507,6 @@ def _main( argv ):
 	_sys.stdout.flush()
 # ENDDEF MAIN
 
-def runFromCMD():
-	_main( _sys.argv )
 	
 #IF
 if __name__ == '__main__':	
