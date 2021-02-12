@@ -35,11 +35,13 @@ def get_iou( y_true,y_pred ):
 	tp, fp, fn = get_tp_fp_fn( y_true, y_pred )
 
 	# Shape: [b,c]
-#	iou = ( tp + EPS ) / ( tp + fp + fn + EPS )
-	iou = ( tp ) / ( tp + fp + fn + EPS )
+	iou = ( tp ) / ( tp + fp + fn )
 	
+	# Mask out NaNs i.e. mask out classes that are not present in y_true as well as in y_pred
+	masked_iou = _tf.boolean_mask( iou, _tf.logical_not( _tf.math.is_nan(iou) ) )
+
 	# Shape: [b,c]
-	return iou
+	return masked_iou
 #ENDDEF
 
 #DEF
@@ -49,10 +51,13 @@ def get_dice( y_true,y_pred ):
 	tp, fp, fn = get_tp_fp_fn( y_true, y_pred )
 
 	# Shape: [b,c]
-	dice = ( 2*tp + EPS ) / ( 2*tp + fp + fn + EPS )
+	dice = ( 2*tp ) / ( 2*tp + fp + fn )
+
+	# Mask out NaNs i.e. mask out classes that are not present in y_true as well as in y_pred
+	masked_dice = _tf.boolean_mask( dice, _tf.logical_not( _tf.math.is_nan(dice) ) )
 
 	# Shape: [b,c]
-	return dice
+	return masked_dice
 #ENDDEF
 
 #DEF
@@ -98,34 +103,33 @@ def FocalSoftDiceLoss( y_true, y_pred, gamma=0 ):
 
 #DEF
 #@_tf.function
-def MAE( y_true, y_pred ):
+def MAE( y_true, y_pred, gamma=0 ):
 
 	mae = _tf.math.abs( y_true-y_pred )
 
 	# Shape: []
-	return _tf.math.reduce_mean( mae )
+	return _tf.math.reduce_mean( _tf.math.pow( mae,gamma+2 ) )
 #ENDDEF
 
 
 #DEF
 #@_tf.function
-def BCE( y_true, y_pred ):
+def BCE( y_true, y_pred, gamma=0 ):
 
 	bce = -1.0 * ( y_true*_tf.math.log( EPS + y_pred ) \
 		+ (1.0-y_true)*_tf.math.log( EPS + 1.0-y_pred ) )
 	
 	# Shape: []
-	return _tf.math.reduce_mean( bce )
+	return _tf.math.reduce_mean( _tf.math.pow( bce,gamma+2 ) )
 #ENDDEF
 
 #DEF
 #@_tf.function
 def CombinedLoss( oh,probs,gamma ):
 
-	iou_mean = FocalIOULoss( oh,probs,gamma )
-#	iou_mean = SoftIOULoss( oh,probs )
-	mae_mean = MAE( oh,probs )
-	bce_mean = BCE( oh,probs )
+	iou_mean = FocalSoftDiceLoss( oh,probs,gamma )
+	mae_mean = MAE( oh,probs,gamma )
+	bce_mean = BCE( oh,probs,gamma )
 
 	total_loss_mean = iou_mean + mae_mean + bce_mean
 
