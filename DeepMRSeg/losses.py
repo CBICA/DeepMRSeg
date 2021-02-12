@@ -108,7 +108,7 @@ def MAE( y_true, y_pred, gamma=0 ):
 	mae = _tf.math.abs( y_true-y_pred )
 
 	# Shape: []
-	return _tf.math.reduce_mean( _tf.math.pow( mae,gamma+2 ) )
+	return _tf.math.reduce_mean( _tf.math.pow( mae,gamma+1 ) )
 #ENDDEF
 
 
@@ -120,7 +120,7 @@ def BCE( y_true, y_pred, gamma=0 ):
 		+ (1.0-y_true)*_tf.math.log( EPS + 1.0-y_pred ) )
 	
 	# Shape: []
-	return _tf.math.reduce_mean( _tf.math.pow( bce,gamma+2 ) )
+	return _tf.math.reduce_mean( _tf.math.pow( bce,gamma+1 ) )
 #ENDDEF
 
 #DEF
