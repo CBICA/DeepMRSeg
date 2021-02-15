@@ -9,9 +9,9 @@ __EXEC_NAME__ 	= "model"
 
 import tensorflow as _tf
 
-from unet_vanilla 	import unet_vanilla, unet_vanilla_bn
-from unet_resinc 	import unet_resinc
-from unet_resnet 	import unet_resnet
+from .unet_vanilla 	import unet_vanilla, unet_vanilla_bn
+from .unet_resinc 	import unet_resinc
+from .unet_resnet 	import unet_resnet
 
 ################################################ FUNCTIONS ################################################
 
