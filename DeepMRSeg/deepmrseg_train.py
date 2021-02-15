@@ -14,18 +14,19 @@ import time as _time
 import signal as _signal
 import tensorflow as _tf
 import numpy as _np
+import platform as _platform
 
 _sys.path.append( _os.path.dirname( _sys.argv[0] ) )
 
-import losses
+from . import losses
 
-from data_io import checkFiles, extractPkl
-from models import create_model
-from data_augmentation import data_reader
-from optimizers import getAdamOpt, getRMSOpt, getSGDOpt, getMomentumOpt
-from layers import get_onehot
+from .data_io import checkFiles, extractPkl
+from .models import create_model
+from .data_augmentation import data_reader
+from .optimizers import getAdamOpt, getRMSOpt, getSGDOpt, getMomentumOpt
+from .layers import get_onehot
 
-import pythonUtilities
+from . import pythonUtilities
 
 ################################################ FUNCTIONS ################################################
 
@@ -165,7 +166,8 @@ def _main( argv ):
 	_sys.stdout.flush()
 
 	### Specifying the trap signal
-	_signal.signal( _signal.SIGHUP, signal_handler )
+	if _platform.system() != 'Windows':
+		_signal.signal( _signal.SIGHUP, signal_handler )
 	_signal.signal( _signal.SIGINT, signal_handler )
 	_signal.signal( _signal.SIGTERM, signal_handler )
 
@@ -768,7 +770,7 @@ def _main( argv ):
 
 
 ################################################# END OF FUNCTIONS ################################################
-	
+
 	
 ################################################ MAIN BODY ################################################
 
