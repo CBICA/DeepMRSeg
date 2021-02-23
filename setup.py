@@ -35,7 +35,7 @@ setuptools.setup(
 	'resource'
 	],
 	entry_points = {
-    'console_scripts': ['deepmrseg_train=DeepMRSeg.deepmrseg_train:_main', 'deepmrseg_test=DeepMRSeg.deepmrseg_test:_main'],
+    'console_scripts': ['deepmrseg_train=DeepMRSeg.deepmrseg_train:runFromCMD', 'deepmrseg_test=DeepMRSeg.deepmrseg_test:runFromCMD'],
     },
     classifiers=(
         "Programming Language :: Python :: 3",

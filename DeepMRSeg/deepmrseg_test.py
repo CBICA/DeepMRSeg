@@ -288,6 +288,8 @@ def predictClasses( refImg, otherImg, num_classes, allmodels, roi_indices, out=N
 #DEF
 def _main( argv ):
 
+	_os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+    
 	### Timestamps
 	import time as _time
 	startTime = _time.asctime()
@@ -425,7 +427,7 @@ def _main( argv ):
 
 	### Predict
 	print("\n----> Running predictions for all subjects in the FileList")
-	_sys.stdout.flush()
+	#_sys.stdout.flush()
 
 	#WITH
 	with _TPE( max_workers=nJobs ) as executor:
@@ -461,7 +463,7 @@ def _main( argv ):
 				#IF
 				if not _os.path.isfile( outImg ):
 					print( "\t---->	%s" % ( row[FLAGS.idCol] ) )
-					_sys.stdout.flush()
+					#_sys.stdout.flush()
 			
 					executor.submit( predictClasses, \
 							refImg=refImg, \
@@ -495,18 +497,20 @@ def _main( argv ):
 	#ENDWITH
 
 	### Print resouce usage
-	import resource as _resource
-	
-	print("\nResource usage for this process")
-	rus = _resource.getrusage(0)
-	print("\tetime \t:", _np.round( (_time.time() - startTimeStamp)/60, 2 ), "mins")
-	print("\tutime \t:", _np.round( rus.ru_utime, 2 ))
-	print("\tstime \t:", _np.round( rus.ru_stime, 2 ))
-	print("\tmaxrss \t:", _np.round( rus.ru_maxrss / 1.e6, 2 ), "GB")
+    #resource package only available in Unix
+#	import resource as _resource 
+#	
+#	print("\nResource usage for this process")
+#	rus = _resource.getrusage(0)
+#	print("\tetime \t:", _np.round( (_time.time() - startTimeStamp)/60, 2 ), "mins")
+#	print("\tutime \t:", _np.round( rus.ru_utime, 2 ))
+#	print("\tstime \t:", _np.round( rus.ru_stime, 2 ))
+#	print("\tmaxrss \t:", _np.round( rus.ru_maxrss / 1.e6, 2 ), "GB")
 
-	_sys.stdout.flush()
+	#_sys.stdout.flush()
 # ENDDEF MAIN
-
+def runFromCMD():
+	_main(_sys.argv)
 	
 #IF
 if __name__ == '__main__':	
