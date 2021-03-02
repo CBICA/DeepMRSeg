@@ -498,13 +498,14 @@ def _main():
 	#ENDWITH
 
 	### Print resouce usage
+	print("\nResource usage for this process")
+	print("\tetime \t:", _np.round( ( _time.time() - startTimeStamp )/60, 2 ), "mins")
+	
 	#resource package only available in Unix
 	if _platform.system() != 'Windows':
 		import resource as _resource 
 	
-		print("\nResource usage for this process")
 		rus = _resource.getrusage(0)
-		print("\tetime \t:", _np.round( (_time.time() - startTimeStamp)/60, 2 ), "mins")
 		print("\tutime \t:", _np.round( rus.ru_utime, 2 ))
 		print("\tstime \t:", _np.round( rus.ru_stime, 2 ))
 		print("\tmaxrss \t:", _np.round( rus.ru_maxrss / 1.e6, 2 ), "GB")
