@@ -175,7 +175,7 @@ def _main():
 	_signal.signal( _signal.SIGTERM, signal_handler )
 
 	### Read command line args
-	print("\nParsing args	 : %s\n" % (argv[ 1: ]) )
+	print("\nParsing args    : %s\n" % (argv[ 1: ]) )
 	FLAGS,parser = read_flags()
 	print(FLAGS)
 
@@ -441,7 +441,7 @@ def _main():
 		def tfrecordreader( serialized_example ):
 
 			feature = {	 'image': _tf.io.FixedLenFeature( [], _tf.string ),
-						   'label': _tf.io.FixedLenFeature( [], _tf.string ) }
+		                     'label': _tf.io.FixedLenFeature( [], _tf.string ) }
 
 			# Decode the record read by the reader
 			features = _tf.io.parse_single_example( serialized_example, \
@@ -761,15 +761,15 @@ def _main():
 	### Print resource 
 	#resource package only available in Unix
 	if _platform.system() != 'Windows':
-	 import resource as _resource
-	 print("\nResource usage for this process")
-	 rus = _resource.getrusage(0)
-	 print("\tetime \t:", _np.round( ( _time.time() - startTimeStamp )/60, 2 ), "mins")
-	 print("\tutime \t:", _np.round( rus.ru_utime, 2 ))
-	 print("\tstime \t:", _np.round( rus.ru_stime, 2 ))
-	 print("\tmaxrss \t:", _np.round( rus.ru_maxrss / 1.e6, 2 ), "GB")
-
-	_sys.stdout.flush()
+		import resource as _resource
+		print("\nResource usage for this process")
+		rus = _resource.getrusage(0)
+		print("\tetime \t:", _np.round( ( _time.time() - startTimeStamp )/60, 2 ), "mins")
+		print("\tutime \t:", _np.round( rus.ru_utime, 2 ))
+		print("\tstime \t:", _np.round( rus.ru_stime, 2 ))
+		print("\tmaxrss \t:", _np.round( rus.ru_maxrss / 1.e6, 2 ), "GB")
+		
+		_sys.stdout.flush()
 # ENDDEF MAIN
 	
 
