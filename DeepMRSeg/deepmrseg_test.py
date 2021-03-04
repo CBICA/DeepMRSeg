@@ -8,8 +8,8 @@ Created on Mon Jul  3 14:27:26 2017
 #- Make sure the output datatypes are efficient and readable by 3dcalc/fslmaths
 
 ################################################ DECLARATIONS ################################################
-__author__ 	= 'Jimit Doshi'
-__EXEC_NAME__ 	= "tf_segunet_test"
+__author__	 = 'Jimit Doshi'
+__EXEC_NAME__	 = "tf_segunet_test"
 
 import os as _os
 import sys as _sys
@@ -286,8 +286,11 @@ def predictClasses( refImg, otherImg, num_classes, allmodels, roi_indices, out=N
 	
 ############## MAIN ##############
 #DEF
-def _main( argv ):
+def _main():
 
+	### init argv
+	argv = _sys.argv
+	
 	### Timestamps
 	import time as _time
 	startTime = _time.asctime()
@@ -307,7 +310,7 @@ def _main( argv ):
 	_signal.signal( _signal.SIGTERM, signal_handler )
 
 	### Read command line args
-	print("\nParsing args 	: %s\n" % (argv[ 1: ]) )
+	print("\nParsing args    : %s\n" % (argv[ 1: ]) )
 	FLAGS,parser = read_flags()
 	print(FLAGS)
 
@@ -495,21 +498,23 @@ def _main( argv ):
 	#ENDWITH
 
 	### Print resouce usage
-	import resource as _resource
-	
 	print("\nResource usage for this process")
-	rus = _resource.getrusage(0)
-	print("\tetime \t:", _np.round( (_time.time() - startTimeStamp)/60, 2 ), "mins")
-	print("\tutime \t:", _np.round( rus.ru_utime, 2 ))
-	print("\tstime \t:", _np.round( rus.ru_stime, 2 ))
-	print("\tmaxrss \t:", _np.round( rus.ru_maxrss / 1.e6, 2 ), "GB")
+	print("\tetime \t:", _np.round( ( _time.time() - startTimeStamp )/60, 2 ), "mins")
+	
+	#resource package only available in Unix
+	if _platform.system() != 'Windows':
+		import resource as _resource 
+	
+		rus = _resource.getrusage(0)
+		print("\tutime \t:", _np.round( rus.ru_utime, 2 ))
+		print("\tstime \t:", _np.round( rus.ru_stime, 2 ))
+		print("\tmaxrss \t:", _np.round( rus.ru_maxrss / 1.e6, 2 ), "GB")
 
-	_sys.stdout.flush()
+		_sys.stdout.flush()
 # ENDDEF MAIN
-
 	
 #IF
 if __name__ == '__main__':	
-	_main( _sys.argv )
+	_main()
 #ENDIF
 

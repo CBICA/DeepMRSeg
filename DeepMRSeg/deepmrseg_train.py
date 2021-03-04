@@ -5,8 +5,8 @@ Created on Mon Jul  3 14:27:26 2017
 """
 
 ################################################ DECLARATIONS ################################################
-__author__ 	= 'Jimit Doshi'
-__EXEC_NAME__ 	= "segunet"
+__author__	 = 'Jimit Doshi'
+__EXEC_NAME__	 = "segunet"
 
 import os as _os
 import sys as _sys
@@ -153,8 +153,11 @@ def signal_handler(signal, frame):
 
 ############## MAIN ##############
 #DEF
-def _main( argv ):
+def _main():
 
+	### init argv
+	argv = _sys.argv
+	
 	### Timestamps
 	startTime = _time.asctime()
 	startTimeStamp = _time.time()
@@ -172,7 +175,7 @@ def _main( argv ):
 	_signal.signal( _signal.SIGTERM, signal_handler )
 
 	### Read command line args
-	print("\nParsing args 	: %s\n" % (argv[ 1: ]) )
+	print("\nParsing args    : %s\n" % (argv[ 1: ]) )
 	FLAGS,parser = read_flags()
 	print(FLAGS)
 
@@ -187,7 +190,6 @@ def _main( argv ):
 	_sys.stdout.flush()
 
 	import csv as _csv
-	import resource as _resource
 	import tempfile as _tempfile
 	import shutil as _shutil
 	from random import shuffle as _shuffle
@@ -438,8 +440,8 @@ def _main( argv ):
 		@_tf.function
 		def tfrecordreader( serialized_example ):
 
-			feature = { 	'image': _tf.io.FixedLenFeature( [], _tf.string ),
-			       		'label': _tf.io.FixedLenFeature( [], _tf.string ) }
+			feature = {	 'image': _tf.io.FixedLenFeature( [], _tf.string ),
+		                     'label': _tf.io.FixedLenFeature( [], _tf.string ) }
 
 			# Decode the record read by the reader
 			features = _tf.io.parse_single_example( serialized_example, \
@@ -479,7 +481,7 @@ def _main( argv ):
 	### DEFINE MODEL ###
 	####################
 	print("\nDefining the network...\n")
-	model = create_model( 	num_classes=FLAGS.num_classes, \
+	model = create_model(	 num_classes=FLAGS.num_classes, \
 				arch=FLAGS.arch, \
 				filters=FLAGS.filters, \
 				depth=FLAGS.depth, \
@@ -753,25 +755,28 @@ def _main( argv ):
 		#ENDTRY
 	#ENDIF
 
-	### Print resource usage
+	### Print resource 
 	print("\nResource usage for this process")
-	rus = _resource.getrusage(0)
 	print("\tetime \t:", _np.round( ( _time.time() - startTimeStamp )/60, 2 ), "mins")
-	print("\tutime \t:", _np.round( rus.ru_utime, 2 ))
-	print("\tstime \t:", _np.round( rus.ru_stime, 2 ))
-	print("\tmaxrss \t:", _np.round( rus.ru_maxrss / 1.e6, 2 ), "GB")
-
-	_sys.stdout.flush()
+	
+	#resource package only available in Unix
+	if _platform.system() != 'Windows':
+		import resource as _resource
+		rus = _resource.getrusage(0)
+		print("\tutime \t:", _np.round( rus.ru_utime, 2 ))
+		print("\tstime \t:", _np.round( rus.ru_stime, 2 ))
+		print("\tmaxrss \t:", _np.round( rus.ru_maxrss / 1.e6, 2 ), "GB")
+		
+		_sys.stdout.flush()
 # ENDDEF MAIN
 	
 
 
 ################################################# END OF FUNCTIONS ################################################
-
 	
 ################################################ MAIN BODY ################################################
 
 #IF
 if __name__ == '__main__':	
-	_main( _sys.argv )
+	 _main()
 #ENDIF
