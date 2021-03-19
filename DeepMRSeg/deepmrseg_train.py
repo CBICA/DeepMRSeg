@@ -1,12 +1,8 @@
-"""
-Created on Mon Jul  3 14:27:26 2017
 
-@author: jimit
-"""
 
 ################################################ DECLARATIONS ################################################
 __author__	 = 'Jimit Doshi'
-__EXEC_NAME__	 = "segunet"
+__EXEC_NAME__	 = "deepmrseg_train"
 
 import os as _os
 import sys as _sys
@@ -193,7 +189,6 @@ def _main():
 	import tempfile as _tempfile
 	import shutil as _shutil
 	from random import shuffle as _shuffle
-#	from sklearn.model_selection import KFold as _KFold
 	import glob as _glob
 	from concurrent.futures import ThreadPoolExecutor as _TPE
 
@@ -222,7 +217,7 @@ def _main():
 			_os.makedirs( FLAGS.tmpDir )
 	else:
 		user_defined_tmpdir = False
-		tmpDir = _tempfile.mkdtemp( prefix='tf_segunet_train_' )
+		tmpDir = _tempfile.mkdtemp( prefix='deepmrseg_train_' )
 	#ENDIF
 	
 	# if nJobs not defined
@@ -324,9 +319,6 @@ def _main():
 						refImg=row[FLAGS.refMod], \
 						labImg=row[FLAGS.labCol], \
 						otherImg=otherModsFileList )
-#				checkFiles( refImg=row[FLAGS.refMod], \
-#						labImg=row[FLAGS.labCol], \
-#						otherImg=otherModsFileList )
 			#ENDFOR
 		#ENDWITH
 	#ENDWITH
@@ -338,12 +330,10 @@ def _main():
 #	******************************************
 #	* COMMENTED OUT ONLY FOR EXPERIMENTATION *
 #	******************************************
-#	# Randomize list
-#	_shuffle( all_sublist )
+	# Randomize list
+	_shuffle( all_sublist )
 
 	# Split into training and validation lists
-#	from sklearn.cross_validation import train_test_split
-#	train_sublist, val_sublist = train_test_split( all_sublist, test_size=0.05 )
 	p = _np.int( len( all_sublist ) * 0.2 )
 	val_sublist = all_sublist[ 0:p ]
 	train_sublist = all_sublist[ p: ]
@@ -397,21 +387,6 @@ def _main():
 						pos_label_balance=FLAGS.label_balance, \
 						ressize=FLAGS.ressize, \
 						orient=FLAGS.reorient )
-#				extractPkl( \
-#						subListFile=FLAGS.sList, \
-#						idcolumn=FLAGS.idCol, \
-#						labCol=FLAGS.labCol, \
-#						refMod=FLAGS.refMod, \
-#						otherMods=otherMods, \
-#						num_modalities=num_modalities, \
-#						subjectlist=[sub], \
-#						roicsv=FLAGS.roi, \
-#						out_path=pref, \
-#						rescalemethod=FLAGS.rescale, \
-#						xy_width=FLAGS.xy_width, \
-#						pos_label_balance=FLAGS.label_balance, \
-#						ressize=FLAGS.ressize, \
-#						orient=FLAGS.reorient )
 			#ELIF
 		#ENDFOR ALL TRAINING SUBJECTS
 	#ENDWITH
@@ -440,8 +415,8 @@ def _main():
 		@_tf.function
 		def tfrecordreader( serialized_example ):
 
-			feature = {	 'image': _tf.io.FixedLenFeature( [], _tf.string ),
-		                     'label': _tf.io.FixedLenFeature( [], _tf.string ) }
+			feature = {	 'image': _tf.io.FixedLenFeature( [], _tf.string ), \
+					 'label': _tf.io.FixedLenFeature( [], _tf.string ) }
 
 			# Decode the record read by the reader
 			features = _tf.io.parse_single_example( serialized_example, \
