@@ -1,8 +1,4 @@
-"""
-Created on Mon Jul  3 14:27:26 2017
 
-@author: jimit
-"""
 ################################################ DECLARATIONS ################################################
 __author__ 	= 'Jimit Doshi'
 __EXEC_NAME__ 	= "unet_resnet"
