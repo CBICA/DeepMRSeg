@@ -53,16 +53,17 @@ def batch_norm( inp ):
 						momentum=0.99, \
 						epsilon=1e-5, \
 						fused=True )( inp )
-#	return _tf.keras.layers.experimental.SyncBatchNormalization( \
-#						center=True, \
-#						scale=True, \
-#						axis=-1, \
-#						momentum=0.99, \
-#						epsilon=1e-5 )( inp )
-
 #ENDDEF
 
+#DEF
+def instance_norm( inp ):
 
+	return _tfa.layers.InstanceNormalization( center=True, \
+						scale=True, \
+						axis=-1, \
+						beta_initializer="random_uniform", \
+						gamma_initializer="random_uniform" )( inp )
+#ENDDEF
 
 #DEF
 def maxpool_layer( inp, pool, stride ):
@@ -101,36 +102,43 @@ def get_onehot( y,ls,xy,c ):
 
 
 #DEF
-def conv_layer_resample_v1( inp, filters, ksize, stride, upsample=False, batchnorm=True, scope='conv_layer' ):
+def conv_layer_resample_v1( inp, filters, ksize, stride, upsample=False, \
+				norm='batch', dropout=0.0 ):
 
-	# convolution layer with f filters of size kxk and upsample stride 2x2
+	# convolution layer
 	x = conv_layer( inp, f=filters, k=ksize, s=stride, upsample=upsample )
 	
-	# batch normalization layer
-	if batchnorm:
+	# normalization layer
+	if batch == 'batch':
 		x = batch_norm( x )
+	elif batch == 'instance':
+		x = instance_norm( x )
 
 	# ReLU activation
-	return _tf.nn.leaky_relu( x )
+	x = _tf.nn.leaky_relu( x )
+
+	# Dropout layer
+	if dropout > 0.0:
+		x = _tf.keras.layers.Dropout( dropout )( x )
+
+	return x
 
 #ENDDEF
 
 #DEF
-def UNetBlock_v1( inp_layer, filters=64, ksize=3, scope='unet_block' ):
+def UNetBlock_v1( inp_layer, filters=64, ksize=3 ):
 
 	conv1 = conv_layer_resample_v1( inp=inp_layer, \
 						filters=filters, \
 						ksize=ksize, \
 						stride=1, \
-						upsample=False, \
-						scope='conv1' )
+						upsample=False )
 
 	conv2 = conv_layer_resample_v1( inp=conv1, \
 						filters=filters, \
 						ksize=ksize, \
 						stride=1, \
-						upsample=False, \
-						scope='conv2' )
+						upsample=False )
 
 		
 	### Return final resUnit
@@ -139,7 +147,7 @@ def UNetBlock_v1( inp_layer, filters=64, ksize=3, scope='unet_block' ):
 #ENDDEF
 
 #DEF
-def ResUnit_v1( inp_layer, filters=64, ksize=3, scope='resunitlayer' ):
+def ResUnit_v1( inp_layer, filters=64, ksize=3 ):
 
 	# convolution layer with f/4 filters of size 1x1
 	conv1 = conv_layer( inp_layer, f=filters, k=ksize, s=1, upsample=False )
@@ -168,7 +176,7 @@ def ResUnit_v1( inp_layer, filters=64, ksize=3, scope='resunitlayer' ):
 #ENDDEF
 
 #DEF
-def ResNetUnit_v1( inp_layer, filters=64, ksize=3, scope='resnetlayer' ):
+def ResNetUnit_v1( inp_layer, filters=64, ksize=3 ):
 
 	# convolution layer with f/2 filters of size 1x1
 	conv1 = conv_layer( inp_layer, f=filters/2, k=1, s=1, upsample=False )
@@ -206,40 +214,39 @@ def ResNetUnit_v1( inp_layer, filters=64, ksize=3, scope='resnetlayer' ):
 #ENDDEF
 
 #DEF
-def ResInc_v1( inp_layer, filters=64, ksize=3, scope='ResInc' ):
+def ResInc_v1( inp_layer, filters=64, ksize=3 ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv1_1' )
+						upsample=False )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv2_1' )
+						upsample=False )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv2_3-1' )
+						upsample=False )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv3_1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-2' )
+						upsample=False )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv4_1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-2' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-3' )
+						upsample=False )
 
 	### Branch 5
 	
 	### Concatenate branches
-#		concat = _tf.concat( [ conv1,conv2,conv3,conv4,conv5 ], axis=-1 )
 	concat = _tf.concat( [ conv1,conv2,conv3,conv4 ], axis=-1 )
 	
 	### Convolution
@@ -263,44 +270,43 @@ def ResInc_v1( inp_layer, filters=64, ksize=3, scope='ResInc' ):
 
 
 #DEF
-def ResNetInc_v1( inp_layer, filters=64, ksize=3, scope='ResNetInc' ):
+def ResNetInc_v1( inp_layer, filters=64, ksize=3 ):
 	
 	### First 3x3 convolution layer
 	conv = conv_layer_resample_v1( inp=inp_layer, filters=filters, ksize=ksize, stride=1, \
-						upsample=False, scope='conv' )
+						upsample=False )
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=conv, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv1_1' )
+						upsample=False )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=conv, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv2_1' )
+						upsample=False )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv2_3-1' )
+						upsample=False )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=conv, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv3_1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-2' )
+						upsample=False )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=conv, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv4_1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-2' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-3' )
+						upsample=False )
 
 	### Branch 5
 	
 	### Concatenate branches
-#		concat = _tf.concat( [ conv1,conv2,conv3,conv4,conv5 ], axis=-1 )
 	concat = _tf.concat( [ conv1,conv2,conv3,conv4 ], axis=-1 )
 	
 	### Convolution
@@ -323,40 +329,39 @@ def ResNetInc_v1( inp_layer, filters=64, ksize=3, scope='ResNetInc' ):
 #ENDDEF
 
 #DEF
-def ResInc_f2_v1( inp_layer, filters=64, ksize=3, scope='ResInc' ):
+def ResInc_f2_v1( inp_layer, filters=64, ksize=3 ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, scope='conv1_1' )
+						upsample=False )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, scope='conv2_1' )
+						upsample=False )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv2_3-1' )
+						upsample=False )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, scope='conv3_1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-2' )
+						upsample=False )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, scope='conv4_1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-2' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-3' )
+						upsample=False )
 
 	### Branch 5
 	
 	### Concatenate branches
-#		concat = _tf.concat( [ conv1,conv2,conv3,conv4,conv5 ], axis=-1 )
 	concat = _tf.concat( [ conv1,conv2,conv3,conv4 ], axis=-1 )
 	
 	### Convolution
@@ -379,41 +384,27 @@ def ResInc_f2_v1( inp_layer, filters=64, ksize=3, scope='ResInc' ):
 #ENDDEF
 
 #DEF
-def ResInc_f2x3_v1( inp_layer, filters=64, ksize=3, scope='ResInc' ):
+def ResInc_f2x3_v1( inp_layer, filters=64, ksize=3 ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, scope='conv1_1' )
+						upsample=False )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, scope='conv2_1' )
+						upsample=False )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv2_3-1' )
+						upsample=False )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, scope='conv3_1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-2' )
+						upsample=False )
 
-#		### Branch 4
-#		conv4 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-#							upsample=False, scope='conv4_1' )
-#		conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-#							upsample=False, scope='conv4_3-1' )
-#		conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-#							upsample=False, scope='conv4_3-2' )
-#		conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-#							upsample=False, scope='conv4_3-3' )
-
-	### Branch 5
-	
 	### Concatenate branches
-#		concat = _tf.concat( [ conv1,conv2,conv3,conv4,conv5 ], axis=-1 )
-#		concat = _tf.concat( [ conv1,conv2,conv3,conv4 ], axis=-1 )
 	concat = _tf.concat( [ conv1,conv2,conv3 ], axis=-1 )
 	
 	### Convolution
@@ -437,41 +428,38 @@ def ResInc_f2x3_v1( inp_layer, filters=64, ksize=3, scope='ResInc' ):
 
 
 #DEF
-def ResInc_f4x4_v1( inp_layer, filters=64, ksize=3, scope='ResInc' ):
+def ResInc_f4x4_v1( inp_layer, filters=64, ksize=3 ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, scope='conv1_1' )
+						upsample=False )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv2_1' )
+						upsample=False )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv2_3-1' )
+						upsample=False )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv3_1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-2' )
+						upsample=False )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv4_1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-2' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-3' )
+						upsample=False )
 
-	### Branch 5
-	
 	### Concatenate branches
 	concat = _tf.concat( [ conv1,conv2,conv3,conv4 ], axis=-1 )
-#		concat = _tf.concat( [ conv1,conv2,conv3 ], axis=-1 )
 	
 	### Convolution
 	# conv
@@ -494,40 +482,35 @@ def ResInc_f4x4_v1( inp_layer, filters=64, ksize=3, scope='ResInc' ):
 
 
 #DEF
-def ResInc_x3_v1( inp_layer, filters=64, ksize=3, scope='ResInc' ):
+def ResInc_x3_v1( inp_layer, filters=64, ksize=3 ):
 	
-#	### Branch 1
-#	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-#						upsample=False, scope='conv1_1' )
-						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv2_1' )
+						upsample=False )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv2_3-1' )
+						upsample=False )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, scope='conv3_1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-2' )
+						upsample=False )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv4_1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-2' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-3' )
+						upsample=False )
 
 	### Branch 5
 	
 	### Concatenate branches
-#	concat = _tf.concat( [ conv1,conv2,conv3,conv4 ], axis=-1 )
 	concat = _tf.concat( [ conv2,conv3,conv4 ], axis=-1 )
 	
 	### Convolution
@@ -551,35 +534,35 @@ def ResInc_x3_v1( inp_layer, filters=64, ksize=3, scope='ResInc' ):
 
 
 #DEF
-def Inc_v1( inp_layer, filters=64, ksize=3, scope='Inc' ):
+def Inc_v1( inp_layer, filters=64, ksize=3 ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv1_1' )
+						upsample=False )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv2_1' )
+						upsample=False )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv2_3-1' )
+						upsample=False )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv3_1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-2' )
+						upsample=False )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, scope='conv4_1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-2' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-3' )
+						upsample=False )
 
 	### Branch 5
 	
@@ -604,40 +587,37 @@ def Inc_v1( inp_layer, filters=64, ksize=3, scope='Inc' ):
 #ENDDEF
 
 #DEF
-def Inc_f2_v1( inp_layer, filters=64, ksize=3, scope='Inc_f2' ):
+def Inc_f2_v1( inp_layer, filters=64, ksize=3 ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, scope='conv1_1' )
+						upsample=False )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, scope='conv2_1' )
+						upsample=False )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv2_3-1' )
+						upsample=False )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, scope='conv3_1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-1' )
+						upsample=False )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv3_3-2' )
+						upsample=False )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, scope='conv4_1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-1' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-2' )
+						upsample=False )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, scope='conv4_3-3' )
+						upsample=False' )
 
-	### Branch 5
-	
 	### Concatenate branches
-#		concat = _tf.concat( [ conv1,conv2,conv3,conv4,conv5 ], axis=-1 )
 	concat = _tf.concat( [ conv1,conv2,conv3,conv4 ], axis=-1 )
 	
 	### Convolution
