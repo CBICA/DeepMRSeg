@@ -1,15 +1,7 @@
-"""
-Created on Mon Jul  3 14:27:26 2017
-
-@author: jimit
-"""
-
-### TO-DO
-#- Make sure the output datatypes are efficient and readable by 3dcalc/fslmaths
 
 ################################################ DECLARATIONS ################################################
 __author__	 = 'Jimit Doshi'
-__EXEC_NAME__	 = "tf_segunet_test"
+__EXEC_NAME__	 = "deepmrseg_test"
 
 import os as _os
 import sys as _sys
@@ -211,6 +203,8 @@ def predictClasses( refImg, otherImg, num_classes, allmodels, roi_indices, out=N
 	val_prob = _np.moveaxis( val_prob,0,2 )
 	ens = val_prob.mean( axis=-1 )
 
+	del val_prob, im_dat
+
 	### Generate predictions for the test subject
 	#IF
 	if out:
@@ -227,7 +221,7 @@ def predictClasses( refImg, otherImg, num_classes, allmodels, roi_indices, out=N
 						out_path=None )
 
 		### Prepare inImg as a 4-dim image
-		inImg_4d = _nib.Nifti1Image( _np.zeros( (inImg.shape+(num_classes,)) ), inImg.affine, inImg.header )
+		inImg_4d = _nib.Nifti1Image( _np.zeros( (inImg.shape+(num_classes,)),dtype=_np.int8 ), inImg.affine, inImg.header )
 		inImg_4d.header.set_zooms( (inImg.header.get_zooms() + (1.0,) ) )
 
 		### Prepare ens as a Nifti1Image
@@ -236,6 +230,7 @@ def predictClasses( refImg, otherImg, num_classes, allmodels, roi_indices, out=N
 
 		### Re-orient, resample and resize ens_f to the refImg space
 		ens_f_ref = _nibp.resample_from_to( ens_f, inImg_4d )
+		del inImg_4d, ens_f
 		
 		### Get ens in refImg space
 		ens_ref = ens_f_ref.get_data()
@@ -250,7 +245,7 @@ def predictClasses( refImg, otherImg, num_classes, allmodels, roi_indices, out=N
 		#ENDFOR
 
 		# clear memory
-		del im_dat,val_prob,ens_pred
+		del ens_pred
 
 
 		### Get outImg from probabilities
