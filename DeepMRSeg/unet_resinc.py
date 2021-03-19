@@ -19,7 +19,8 @@ from .layers import ResUnit_v1, ResInc_v1, conv_layer_resample_v1
 #INITIALIZER = _tf.keras.initializers.he_normal( seed=None )
 
 # DEF UNET
-def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,keep_prob=1.0,num_classes=2,lite=False ):
+def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
+		keep_prob=1.0,num_classes=2,lite=False,norm='batch' ):
 
 	skips = []
 	fm = [filters]
@@ -39,7 +40,9 @@ def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,keep_prob=1
 					filters=fm[-1], \
 					ksize=1, \
 					stride=1, \
-					upsample=False )
+					upsample=False, \
+					norm=norm, \
+					dropout=0.0 )
 	print(conv)
 
 	skips.append(conv)
@@ -78,7 +81,9 @@ def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,keep_prob=1
 							filters=fm[-1], \
 							ksize=2, \
 							stride=2, \
-							upsample=False )
+							upsample=False, \
+							norm=norm, \
+							dropout=0.0 )
 			print(conv)
 
 		### Add Residual layers
@@ -110,7 +115,9 @@ def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,keep_prob=1
 						filters=fm[i], \
 						ksize=2, \
 						stride=2, \
-						upsample=True )
+						upsample=True, \
+						norm=norm, \
+						dropout=0.0 )
 		print(conv)
 
 		### Concatenate with Decoder output
