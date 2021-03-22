@@ -4,7 +4,7 @@ __author__ 	= 'Jimit Doshi'
 __EXEC_NAME__ 	= "layers"
 
 import tensorflow as _tf
-
+import tensorflow_addons as _tfa
 
 # Initializer
 #INITIALIZER = _tf.keras.initializers.GlorotNormal( seed=None )
