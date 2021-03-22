@@ -39,8 +39,7 @@ def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 					ksize=1, \
 					stride=1, \
 					upsample=False, \
-					norm=norm, \
-					dropout=0.0 )
+					norm=norm )
 	print(conv)
 
 	skips.append(conv)
@@ -80,8 +79,7 @@ def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 							ksize=2, \
 							stride=2, \
 							upsample=False, \
-							norm=norm, \
-							dropout=0.0 )
+							norm=norm )
 			print(conv)
 
 		### Add Residual layers
@@ -114,8 +112,7 @@ def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 						ksize=2, \
 						stride=2, \
 						upsample=True, \
-						norm=norm, \
-						dropout=0.0 )
+						norm=norm )
 		print(conv)
 
 		### Concatenate with Decoder output
