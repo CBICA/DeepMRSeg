@@ -110,8 +110,7 @@ def get_onehot( y,ls,xy,c ):
 
 
 #DEF
-def conv_layer_resample_v1( inp, filters, ksize, stride, upsample=False, \
-				norm='batch', dropout=0.0 ):
+def conv_layer_resample_v1( inp, filters, ksize, stride, upsample=False, norm='batch' ):
 
 	# convolution layer
 	x = conv_layer( inp, f=filters, k=ksize, s=stride, upsample=upsample )
@@ -122,32 +121,26 @@ def conv_layer_resample_v1( inp, filters, ksize, stride, upsample=False, \
 	# ReLU activation
 	x = _tf.nn.leaky_relu( x )
 
-	# Dropout layer
-	if dropout > 0.0:
-		x = _tf.keras.layers.Dropout( dropout )( x )
-
 	return x
 
 #ENDDEF
 
 #DEF
-def UNetBlock_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
+def UNetBlock_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 
 	conv1 = conv_layer_resample_v1( inp=inp_layer, \
 						filters=filters, \
 						ksize=ksize, \
 						stride=1, \
 						upsample=False, \
-						norm=norm, \
-						dropout=dropout )
+						norm=norm )
 
 	conv2 = conv_layer_resample_v1( inp=conv1, \
 						filters=filters, \
 						ksize=ksize, \
 						stride=1, \
 						upsample=False, \
-						norm=norm, \
-						dropout=dropout )
+						norm=norm )
 
 		
 	### Return final resUnit
@@ -156,7 +149,7 @@ def UNetBlock_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
 #ENDDEF
 
 #DEF
-def ResUnit_v1( inp_layer, filters=64, ksize=3 ):
+def ResUnit_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 
 	# convolution layer with f/4 filters of size 1x1
 	conv1 = conv_layer( inp_layer, f=filters, k=ksize, s=1, upsample=False )
@@ -185,7 +178,7 @@ def ResUnit_v1( inp_layer, filters=64, ksize=3 ):
 #ENDDEF
 
 #DEF
-def ResNetUnit_v1( inp_layer, filters=64, ksize=3 ):
+def ResNetUnit_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 
 	# convolution layer with f/2 filters of size 1x1
 	conv1 = conv_layer( inp_layer, f=filters/2, k=1, s=1, upsample=False )
@@ -217,44 +210,42 @@ def ResNetUnit_v1( inp_layer, filters=64, ksize=3 ):
 	# ReLU activation
 	relu3 = _tf.nn.leaky_relu( res )
 		
-	### Return final resUnit
+	### Return final layer
 	return relu3
 
 #ENDDEF
 
 #DEF
-def ResInc_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
+def ResInc_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
-	### Branch 5
-	
 	### Concatenate branches
 	concat = _tf.concat( [ conv1,conv2,conv3,conv4 ], axis=-1 )
 	
@@ -271,50 +262,46 @@ def ResInc_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
 	# ReLU activation
 	relu = _tf.nn.leaky_relu( res )
 
-		
-	
 	### Return final resunit
 	return relu
 #ENDDEF
 
 
 #DEF
-def ResNetInc_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
+def ResNetInc_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### First 3x3 convolution layer
 	conv = conv_layer_resample_v1( inp=inp_layer, filters=filters, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=conv, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=conv, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=conv, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=conv, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
-	### Branch 5
-	
 	### Concatenate branches
 	concat = _tf.concat( [ conv1,conv2,conv3,conv4 ], axis=-1 )
 	
@@ -331,45 +318,41 @@ def ResNetInc_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
 	# ReLU activation
 	relu = _tf.nn.leaky_relu( res )
 
-		
-	
 	### Return final resunit
 	return relu
 #ENDDEF
 
 #DEF
-def ResInc_f2_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
+def ResInc_f2_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
-	### Branch 5
-	
 	### Concatenate branches
 	concat = _tf.concat( [ conv1,conv2,conv3,conv4 ], axis=-1 )
 	
@@ -386,32 +369,30 @@ def ResInc_f2_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
 	# ReLU activation
 	relu = _tf.nn.leaky_relu( res )
 
-		
-	
 	### Return final resunit
 	return relu
 #ENDDEF
 
 #DEF
-def ResInc_f2x3_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
+def ResInc_f2x3_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
 	### Concatenate branches
 	concat = _tf.concat( [ conv1,conv2,conv3 ], axis=-1 )
@@ -429,43 +410,41 @@ def ResInc_f2x3_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
 	# ReLU activation
 	relu = _tf.nn.leaky_relu( res )
 
-		
-	
 	### Return final resunit
 	return relu
 #ENDDEF
 
 
 #DEF
-def ResInc_f4x4_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
+def ResInc_f4x4_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
 	### Concatenate branches
 	concat = _tf.concat( [ conv1,conv2,conv3,conv4 ], axis=-1 )
@@ -483,39 +462,37 @@ def ResInc_f4x4_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
 	# ReLU activation
 	relu = _tf.nn.leaky_relu( res )
 
-		
-	
 	### Return final resunit
 	return relu
 #ENDDEF
 
 
 #DEF
-def ResInc_x3_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
+def ResInc_x3_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
 	### Branch 5
 	
@@ -535,43 +512,41 @@ def ResInc_x3_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
 	# ReLU activation
 	relu = _tf.nn.leaky_relu( res )
 
-		
-	
 	### Return final resunit
 	return relu
 #ENDDEF
 
 
 #DEF
-def Inc_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
+def Inc_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/4, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
 	### Concatenate branches
 	concat = _tf.concat( [ conv1,conv2,conv3,conv4 ], axis=-1 )
@@ -586,42 +561,40 @@ def Inc_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
 	# ReLU activation
 	relu = _tf.nn.leaky_relu( bn )
 
-		
-	
 	### Return final resunit
 	return relu
 #ENDDEF
 
 #DEF
-def Inc_f2_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
+def Inc_f2_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 						
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv2 = conv_layer_resample_v1( inp=conv2, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	
 	### Branch 3
 	conv3 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv3 = conv_layer_resample_v1( inp=conv3, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
 	### Branch 4
 	conv4 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 	conv4 = conv_layer_resample_v1( inp=conv4, filters=filters/2, ksize=ksize, stride=1, \
-						upsample=False, norm=norm, dropout=dropout )
+						upsample=False, norm=norm )
 
 	### Concatenate branches
 	concat = _tf.concat( [ conv1,conv2,conv3,conv4 ], axis=-1 )
@@ -636,8 +609,6 @@ def Inc_f2_v1( inp_layer, filters=64, ksize=3, norm='batch', dropout=0.0 ):
 	# ReLU activation
 	relu = _tf.nn.leaky_relu( bn )
 
-		
-	
 	### Return final resunit
 	return relu
 #ENDDEF
