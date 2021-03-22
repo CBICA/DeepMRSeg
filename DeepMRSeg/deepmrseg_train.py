@@ -122,6 +122,9 @@ def read_flags():
 				help="use deep supervision of the network")
 	trainArgs.add_argument( "--lite", default=False, action="store_true", \
 				help="use the lite version of the network")
+	trainArgs.add_argument( "--norm", default='batch', type=str, \
+				help="normalization layer to use \
+					 choose from { 'batch', 'instance' }")
 
 #	MISC
 #	====
@@ -245,7 +248,10 @@ def _main():
 	#ENDIF
 
 	### Print parsed args
-	print( "\nTF version \t: %s" % (_tf.__version__) )
+	print( "\nPackage Versions" )
+	print( "python \t\t: %s" % (_platform.python_version()) )	
+	print( "tensorflow \t: %s" % (_tf.__version__) )
+	print( "numpy \t\t: %s" % (_np.__version__) )
 	
 	print( "\nFile List \t: %s" % (FLAGS.sList) )
 	print( "ID Column \t: %s" % (FLAGS.idCol) )
@@ -282,7 +288,8 @@ def _main():
 	print("Label Smoothing : %s" % (str(FLAGS.label_smoothing)))
 	print("Deep Supervision: %s" % (str(FLAGS.deep_supervision)))
 	print("Lite Verion \t: %s" % (str(FLAGS.lite)))
-	print("Patience Param \t: %d\n" % (FLAGS.patience))
+	print("Patience Param \t: %d" % (FLAGS.patience))
+	print("Normalization \t: %s\n" % (FLAGS.norm))
 
 	# create model dir
 	if not _os.path.isdir( FLAGS.mdlDir ):
@@ -456,13 +463,14 @@ def _main():
 	### DEFINE MODEL ###
 	####################
 	print("\nDefining the network...\n")
-	model = create_model(	 num_classes=FLAGS.num_classes, \
+	model = create_model(	num_classes=FLAGS.num_classes, \
 				arch=FLAGS.arch, \
 				filters=FLAGS.filters, \
 				depth=FLAGS.depth, \
 				num_modalities=num_modalities, \
 				layers=FLAGS.layers, \
-				lite=FLAGS.lite )		
+				lite=FLAGS.lite, \
+				norm=FLAGS.norm )		
 	model.summary( line_length=150 )
 
 	#####################
