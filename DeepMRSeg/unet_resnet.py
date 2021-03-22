@@ -51,7 +51,7 @@ def unet_resnet( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 
 	### Add Residual layers
 	for l in range(0,layers):
-		conv = ResUnit_v1( conv, filters=filters, ksize=ksize )
+		conv = ResUnit_v1( conv, filters=filters, ksize=ksize, norm=norm )
 		print(conv)
 
 	skips.append(conv)
@@ -84,7 +84,7 @@ def unet_resnet( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 
 		### Add Residual layers
 		for l in range(0,layers):
-			conv = ResUnit_v1( conv, filters=fm[-1], ksize=ksize )
+			conv = ResUnit_v1( conv, filters=fm[-1], ksize=ksize, norm=norm )
 			print(conv)
 
 
@@ -101,10 +101,10 @@ def unet_resnet( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 
 	# FOR DECODING BLOCKS
 	for i in range(depth):
-		### Dropout for first 3 layers
-		if i<3:
-			conv = _tf.keras.layers.Dropout( 0.5 )( conv )
-			print(conv)
+                ### Dropout for first 3 layers
+                if i<3:
+                        conv = _tf.keras.layers.Dropout( 0.5 )( conv )
+                        print(conv)
 
 		### Upsample once
 		conv = conv_layer_resample_v1( inp=conv, \
@@ -121,7 +121,7 @@ def unet_resnet( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 		
 		### Add Residual layers
 		for l in range(0,layers):
-			conv = ResUnit_v1( conv, filters=fm[i]*2, ksize=ksize )
+			conv = ResUnit_v1( conv, filters=fm[i]*2, ksize=ksize, norm=norm )
 			print(conv)
 
 		if i==depth-2:
@@ -151,7 +151,7 @@ def unet_resnet( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 		
 	### Add Residual layers
 	for l in range(0,layers):
-		conv = ResUnit_v1( conv, filters=conv.shape.as_list()[-1], ksize=ksize )
+		conv = ResUnit_v1( conv, filters=conv.shape.as_list()[-1], ksize=ksize, norm=norm )
 		print(conv)
 
 	### Logits Layer
