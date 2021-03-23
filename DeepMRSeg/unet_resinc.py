@@ -100,10 +100,10 @@ def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 
 	# FOR DECODING BLOCKS
 	for i in range(depth):
-                ### Dropout for first 3 layers
-                if i<3:
-                        conv = _tf.keras.layers.Dropout( 0.5 )( conv )
-                        print(conv)
+		### Dropout for first 3 layers
+		if i<3:
+			conv = _tf.keras.layers.Dropout( 0.5 )( conv )
+			print(conv)
 
 		### Upsample once
 		conv = conv_layer_resample_v1( inp=conv, \
