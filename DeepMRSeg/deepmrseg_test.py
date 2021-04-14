@@ -165,7 +165,134 @@ def loadModel( models,cp ):
 #ENDDEF	
 
 #DEF
+def extractData( refImg, otherImg, rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320 ):
+
+	return extractDataForSubject( \
+			otherImg=otherImg, \
+			refImg=refImg, \
+			ressize=ressize, \
+			orient=orient, \
+			xy_width=xy_width, \
+			rescalemethod=rescalemethod )
+#ENDDEF
+
+#DEF
+def runModel( im_dat, num_classes, allmodels ):
+
+	### Create array to store output probabilities
+	val_prob = _np.zeros( ( im_dat.shape[0:3] + (num_classes,len(allmodels)) ) )
+
+	# Launch testing
+	
+	# FOR EACH SLICE	
+	for i in range( im_dat.shape[0] ):
+		# FOR EACH MODEL
+		for c in range( len(allmodels) ):
+			val_prob[i,:,:,:,c] = allmodels[c].run( im_dat[i].reshape( (1,)+im_dat[i].shape ) )
+		# ENDFOR EACH MODEL
+	# ENDFOR EACH SLICE
+
+
+	### Reshuffle predictions from [z,x,y,c,m] -> [x,y,z,c,m]
+	val_prob = _np.moveaxis( val_prob,0,2 )
+	ens = val_prob.mean( axis=-1 )
+
+	del val_prob, im_dat
+
+	return ens
+#ENDDEF
+
+#DEF
+def saveOutput( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
+			rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320 ):
+
+	### Import more modules
+	import nibabel as _nib
+	import nibabel.processing as _nibp
+	from scipy.ndimage.interpolation import zoom as _zoom
+	import csv as _csv
+
+	### Read reference image
+	inImg = _nib.load( refImg )
+	
+	### Resample refImg
+	inImg_res,inImg_res_F = loadrespadsave( in_path=refImg, \
+					xy_width=xy_width, \
+					ressize=ressize, \
+					orient=orient, \
+					mask=0, \
+					rescalemethod=rescalemethod, \
+					out_path=None )
+
+	### Prepare inImg as a 4-dim image
+	inImg_4d = _nib.Nifti1Image( _np.zeros( (inImg.shape+(num_classes,)),dtype=_np.int8 ), inImg.affine, inImg.header )
+	inImg_4d.header.set_zooms( (inImg.header.get_zooms() + (1.0,) ) )
+
+	### Prepare ens as a Nifti1Image
+	ens_f = _nib.Nifti1Image( ens, inImg_res_F.affine, inImg_res_F.header )
+	ens_f.header.set_zooms( (inImg_res_F.header.get_zooms() + (1.0,) ) )
+
+	### Re-orient, resample and resize ens_f to the refImg space
+	ens_f_ref = _nibp.resample_from_to( ens_f, inImg_4d )
+	del inImg_4d, ens_f
+	
+	### Get ens in refImg space
+	ens_ref = ens_f_ref.get_data()
+	ens_pred = _np.argmax( ens_ref,axis=-1 )
+	ens_pred_enc = _np.zeros_like( ens_pred )
+
+	# encode indices to rois if provided
+	for i in range( len(roi_indices) ):
+	
+		ind,roi = roi_indices[i]
+		ens_pred_enc = _np.where( ens_pred==int(ind), int(roi), ens_pred_enc )
+	#ENDFOR
+
+	# clear memory
+	del ens_pred
+
+
+	### Get outImg from probabilities
+	outImgDat_img = _nib.Nifti1Image( ens_pred_enc, inImg.affine, inImg.header )
+	outImgDat_img.set_data_dtype( 'uint8' )
+	outImgDat_img.to_filename( out )
+
+	### If probabilities need to be saved
+	#IF
+	if probs:
+		#FOR
+		for i in range( len(roi_indices) ):
+			
+			ind,roi = roi_indices[i]
+			
+			outImgDat = ens_ref[:,:,:,ind].copy()
+			outImgDat = _np.where( outImgDat<0.01, 0, outImgDat )
+	
+			outImgDat_img = _nib.Nifti1Image( outImgDat, inImg.affine, inImg.header )
+			outImgDat_img.set_data_dtype( 'float32' )
+			outImgDat_img.to_filename( _os.path.join( out[:-7] + '_probabilities_' + str(roi) + '.nii.gz' ) )
+		#ENDFOR
+	#ENDIF
+#ENDDEF
+
+#DEF
 def predictClasses( refImg, otherImg, num_classes, allmodels, roi_indices, out=None, probs=False, \
+			rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320 ):
+
+	im_dat = extractData( refImg, otherImg, rescalemethod=rescalemethod, ressize=ressize, \
+				orient=orient, xy_width=xy_width )
+
+	ens = runModel( im_dat, num_classes, allmodels )
+
+	#IF
+	if out:
+		saveOutput( ens, refImg, num_classes, roi_indices, out=out, probs=probs, \
+			rescalemethod=rescalemethod, ressize=ressize, orient=orient, xy_width=xy_width )
+	#ENDIF
+#ENDDEF
+
+#DEF
+def predictClasses_old( refImg, otherImg, num_classes, allmodels, roi_indices, out=None, probs=False, \
 			rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320 ):
 
 	### Import more modules
