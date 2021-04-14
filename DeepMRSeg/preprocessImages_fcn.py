@@ -1,13 +1,9 @@
 #!/usr/bin/env python
 
-"""
-Created on Mon Jul  3 14:27:26 2017
 
-@author: jimit
-"""
 ################################################ DECLARATIONS ################################################
 __author__ 	= 'Jimit Doshi'
-__EXEC_NAME__ 	= "wmls_preprocess"
+__EXEC_NAME__ 	= "preprocessImages"
 
 import os as _os
 import sys as _sys

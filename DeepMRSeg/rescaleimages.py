@@ -3,10 +3,10 @@
 """Rescales images"""
 
 ################################################ DECLARATIONS ################################################
-__author__ = 'Jimit Doshi'
+__author__ 	= 'Jimit Doshi'
+__EXEC_NAME__ 	= "rescaleimages.py"
 
 import numpy as _np
-
 
 ################################################ FUNCTIONS ################################################
 

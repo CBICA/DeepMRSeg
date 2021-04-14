@@ -20,22 +20,23 @@ setuptools.setup(
 	install_requires=[
 	'tensorflow~=2.2.0',
 	'tensorflow-addons==0.11.2',
-	'numpy~=1.18.4',
 	'dill', 
 	'h5py==2.10.0', 
 	'hyperopt', 
 	'keras',
-	'pandas', 
+#	'pandas', 
+	'numpy~=1.18.4',
 	'protobuf',
 	'pymongo',
 	'scikit-learn',
-	'seaborn',
-    'scipy',
+#	'seaborn',
+	'scipy==1.4.1',
 	'nibabel',
 	'resource'
 	],
 	entry_points = {
-    'console_scripts': ['deepmrseg_train=DeepMRSeg.deepmrseg_train:_main', 'deepmrseg_test=DeepMRSeg.deepmrseg_test:_main'],
+    'console_scripts': ['deepmrseg_train=DeepMRSeg.deepmrseg_train:_main', 
+			'deepmrseg_test=DeepMRSeg.deepmrseg_test:_main'],
     },
     classifiers=(
         "Programming Language :: Python :: 3",
