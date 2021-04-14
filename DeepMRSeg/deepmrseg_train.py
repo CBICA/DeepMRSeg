@@ -1,12 +1,8 @@
-"""
-Created on Mon Jul  3 14:27:26 2017
 
-@author: jimit
-"""
 
 ################################################ DECLARATIONS ################################################
 __author__	 = 'Jimit Doshi'
-__EXEC_NAME__	 = "segunet"
+__EXEC_NAME__	 = "deepmrseg_train"
 
 import os as _os
 import sys as _sys
@@ -126,6 +122,9 @@ def read_flags():
 				help="use deep supervision of the network")
 	trainArgs.add_argument( "--lite", default=False, action="store_true", \
 				help="use the lite version of the network")
+	trainArgs.add_argument( "--norm", default='batch', type=str, \
+				help="normalization layer to use \
+					 choose from { 'batch', 'instance' }")
 
 #	MISC
 #	====
@@ -193,7 +192,6 @@ def _main():
 	import tempfile as _tempfile
 	import shutil as _shutil
 	from random import shuffle as _shuffle
-#	from sklearn.model_selection import KFold as _KFold
 	import glob as _glob
 	from concurrent.futures import ThreadPoolExecutor as _TPE
 
@@ -222,7 +220,7 @@ def _main():
 			_os.makedirs( FLAGS.tmpDir )
 	else:
 		user_defined_tmpdir = False
-		tmpDir = _tempfile.mkdtemp( prefix='tf_segunet_train_' )
+		tmpDir = _tempfile.mkdtemp( prefix='deepmrseg_train_' )
 	#ENDIF
 	
 	# if nJobs not defined
@@ -250,7 +248,10 @@ def _main():
 	#ENDIF
 
 	### Print parsed args
-	print( "\nTF version \t: %s" % (_tf.__version__) )
+	print( "\nPackage Versions" )
+	print( "python \t\t: %s" % (_platform.python_version()) )	
+	print( "tensorflow \t: %s" % (_tf.__version__) )
+	print( "numpy \t\t: %s" % (_np.__version__) )
 	
 	print( "\nFile List \t: %s" % (FLAGS.sList) )
 	print( "ID Column \t: %s" % (FLAGS.idCol) )
@@ -287,7 +288,8 @@ def _main():
 	print("Label Smoothing : %s" % (str(FLAGS.label_smoothing)))
 	print("Deep Supervision: %s" % (str(FLAGS.deep_supervision)))
 	print("Lite Verion \t: %s" % (str(FLAGS.lite)))
-	print("Patience Param \t: %d\n" % (FLAGS.patience))
+	print("Patience Param \t: %d" % (FLAGS.patience))
+	print("Normalization \t: %s\n" % (FLAGS.norm))
 
 	# create model dir
 	if not _os.path.isdir( FLAGS.mdlDir ):
@@ -324,9 +326,6 @@ def _main():
 						refImg=row[FLAGS.refMod], \
 						labImg=row[FLAGS.labCol], \
 						otherImg=otherModsFileList )
-#				checkFiles( refImg=row[FLAGS.refMod], \
-#						labImg=row[FLAGS.labCol], \
-#						otherImg=otherModsFileList )
 			#ENDFOR
 		#ENDWITH
 	#ENDWITH
@@ -338,12 +337,10 @@ def _main():
 #	******************************************
 #	* COMMENTED OUT ONLY FOR EXPERIMENTATION *
 #	******************************************
-#	# Randomize list
-#	_shuffle( all_sublist )
+	# Randomize list
+	_shuffle( all_sublist )
 
 	# Split into training and validation lists
-#	from sklearn.cross_validation import train_test_split
-#	train_sublist, val_sublist = train_test_split( all_sublist, test_size=0.05 )
 	p = _np.int( len( all_sublist ) * 0.2 )
 	val_sublist = all_sublist[ 0:p ]
 	train_sublist = all_sublist[ p: ]
@@ -397,21 +394,6 @@ def _main():
 						pos_label_balance=FLAGS.label_balance, \
 						ressize=FLAGS.ressize, \
 						orient=FLAGS.reorient )
-#				extractPkl( \
-#						subListFile=FLAGS.sList, \
-#						idcolumn=FLAGS.idCol, \
-#						labCol=FLAGS.labCol, \
-#						refMod=FLAGS.refMod, \
-#						otherMods=otherMods, \
-#						num_modalities=num_modalities, \
-#						subjectlist=[sub], \
-#						roicsv=FLAGS.roi, \
-#						out_path=pref, \
-#						rescalemethod=FLAGS.rescale, \
-#						xy_width=FLAGS.xy_width, \
-#						pos_label_balance=FLAGS.label_balance, \
-#						ressize=FLAGS.ressize, \
-#						orient=FLAGS.reorient )
 			#ELIF
 		#ENDFOR ALL TRAINING SUBJECTS
 	#ENDWITH
@@ -440,8 +422,8 @@ def _main():
 		@_tf.function
 		def tfrecordreader( serialized_example ):
 
-			feature = {	 'image': _tf.io.FixedLenFeature( [], _tf.string ),
-		                     'label': _tf.io.FixedLenFeature( [], _tf.string ) }
+			feature = {	 'image': _tf.io.FixedLenFeature( [], _tf.string ), \
+					 'label': _tf.io.FixedLenFeature( [], _tf.string ) }
 
 			# Decode the record read by the reader
 			features = _tf.io.parse_single_example( serialized_example, \
@@ -481,13 +463,14 @@ def _main():
 	### DEFINE MODEL ###
 	####################
 	print("\nDefining the network...\n")
-	model = create_model(	 num_classes=FLAGS.num_classes, \
+	model = create_model(	num_classes=FLAGS.num_classes, \
 				arch=FLAGS.arch, \
 				filters=FLAGS.filters, \
 				depth=FLAGS.depth, \
 				num_modalities=num_modalities, \
 				layers=FLAGS.layers, \
-				lite=FLAGS.lite )		
+				lite=FLAGS.lite, \
+				norm=FLAGS.norm )		
 	model.summary( line_length=150 )
 
 	#####################
@@ -532,7 +515,6 @@ def _main():
 	epoch_val_mael_avg = _tf.keras.metrics.Mean()
 	epoch_val_bcel_avg = _tf.keras.metrics.Mean()
 
-
 	@_tf.function
 	def train_step( x,y ):
 		with _tf.GradientTape() as tape:
@@ -553,6 +535,7 @@ def _main():
 	@_tf.function
 	def test_step( x,y ):
 		preds_d1,probs_d1,_,_,_,_ = model( x, training=False )
+
 		oh_d1 = get_onehot( y,0,FLAGS.xy_width,FLAGS.num_classes )
 		
 		total_loss_d1, iou_d1, mae_d1, bce_d1 = losses.CombinedLoss( oh_d1,probs_d1,0 )
@@ -640,11 +623,9 @@ def _main():
 		### Set the learning rate based on the chosen schedule
 		current_lr,last_lr_change_counter = set_lr( epoch,last_lr_change_counter )
 
-
 		# Iterate over the batches of the dataset.
 		for step, (x_batch_train, y_batch_train) in enumerate(train_ds):
 			ttl,tioul,tmael,tbcel = train_step( x_batch_train,y_batch_train )
-
 
 			# Add current batch loss
 			epoch_train_loss_avg.update_state( ttl )
@@ -652,10 +633,10 @@ def _main():
 			epoch_train_mael_avg.update_state( tmael )
 			epoch_train_bcel_avg.update_state( tbcel )
 
-
 			# IF DISPLAY TRAINING METRICS
 			if i%1000 == 0:
 				timeperiter = (_time.time()-est) / (i+1) * 1000 / 60.
+
 				print( "\t\titerations : %d, time per %d iterations: %.2f mins" % \
 								( i, 1000, timeperiter ) )
 
@@ -745,7 +726,6 @@ def _main():
 		epoch_train_ioul_avg.reset_states(), epoch_val_ioul_avg.reset_states()
 		epoch_train_mael_avg.reset_states(), epoch_val_mael_avg.reset_states()
 		epoch_train_bcel_avg.reset_states(), epoch_val_bcel_avg.reset_states()
-
 
 	### Remove tmpDir and its contents, if not user defined
 	#IF

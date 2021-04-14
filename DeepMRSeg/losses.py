@@ -1,15 +1,11 @@
-"""
-Created on Mon Jul  3 14:27:26 2017
 
-@author: jimit
-"""
 ################################################ DECLARATIONS ################################################
 __author__ 	= 'Jimit Doshi'
 __EXEC_NAME__ 	= "losses"
 
 import tensorflow as _tf
 
-EPS = 1e-7
+EPS = _tf.constant( 1e-7 )
 
 ################################################ FUNCTIONS ################################################
 
@@ -24,7 +20,7 @@ def get_tp_fp_fn( y_true,y_pred ):
 	fp = _tf.math.reduce_sum( (1-y_true) * y_pred, axis=[1,2] )
 	fn = _tf.math.reduce_sum( y_true * (1-y_pred), axis=[1,2] )
 	
-	# Shape: [b]
+	# Shape: [b,c]
 	return tp, fp, fn
 #ENDDEF
 
@@ -32,25 +28,16 @@ def get_tp_fp_fn( y_true,y_pred ):
 #@_tf.function
 def get_iou( y_true,y_pred ):
 	
-#	tp, fp, fn = get_tp_fp_fn( y_true, y_pred )
-#
-#	# Shape: [b,c]
-#	iou = ( tp + EPS ) / ( tp + fp + fn + EPS )
-#	
-#	# Shape: [b,c]
-#	return iou
-
-	intersection = EPS + _tf.reduce_sum( _tf.multiply( y_pred,y_true ), \
-                                        axis=[1,2] )
-
-	union = EPS + _tf.reduce_sum( _tf.subtract( _tf.add( y_pred,y_true ), \
-                                                _tf.multiply( y_pred,y_true ) ), \
-                                axis=[1,2] )
-
-	iou = _tf.divide( intersection,union )
+	tp, fp, fn = get_tp_fp_fn( y_true, y_pred )
 
 	# Shape: [b,c]
-	return iou
+	iou = ( tp ) / ( tp + fp + fn )
+	
+	# Mask out NaNs i.e. mask out classes that are not present in y_true as well as in y_pred
+	masked_iou = _tf.boolean_mask( iou, _tf.logical_not( _tf.math.is_nan(iou) ) )
+
+	# Shape: [b,c]
+	return masked_iou
 #ENDDEF
 
 #DEF
@@ -60,17 +47,20 @@ def get_dice( y_true,y_pred ):
 	tp, fp, fn = get_tp_fp_fn( y_true, y_pred )
 
 	# Shape: [b,c]
-	dice = ( 2*tp + EPS ) / ( 2*tp + fp + fn + EPS )
+	dice = ( 2*tp ) / ( 2*tp + fp + fn )
+
+	# Mask out NaNs i.e. mask out classes that are not present in y_true as well as in y_pred
+	masked_dice = _tf.boolean_mask( dice, _tf.logical_not( _tf.math.is_nan(dice) ) )
 
 	# Shape: [b,c]
-	return dice
+	return masked_dice
 #ENDDEF
 
 #DEF
 #@_tf.function
 def SoftIOULoss( y_true, y_pred ):
 	
-	iouloss = 1 - get_iou( y_true,y_pred )
+	iouloss = 1.0 - get_iou( y_true,y_pred )
 
 	# Shape: []
 	return _tf.math.reduce_mean( iouloss )
@@ -80,7 +70,7 @@ def SoftIOULoss( y_true, y_pred ):
 #@_tf.function
 def FocalIOULoss( y_true, y_pred, gamma=0 ):
 	
-	focaliouloss = 1 - _tf.math.pow( get_iou( y_true,y_pred ),gamma+1 )
+	focaliouloss = 1.0 - _tf.math.pow( get_iou( y_true,y_pred ),gamma+1 )
 
 	# Shape: []
 	return _tf.math.reduce_mean( focaliouloss )
@@ -90,7 +80,7 @@ def FocalIOULoss( y_true, y_pred, gamma=0 ):
 #@_tf.function
 def SoftDiceLoss( y_true, y_pred ):
 
-	diceloss = 1 - get_dice( y_true,y_pred )
+	diceloss = 1.0 - get_dice( y_true,y_pred )
 
 	# Shape: []
 	return _tf.math.reduce_mean( diceloss )
@@ -100,7 +90,7 @@ def SoftDiceLoss( y_true, y_pred ):
 #@_tf.function
 def FocalSoftDiceLoss( y_true, y_pred, gamma=0 ):
 
-	focaldiceloss = 1 - _tf.math.pow( get_dice( y_true,y_pred ),gamma+1 )
+	focaldiceloss = 1.0 - _tf.math.pow( get_dice( y_true,y_pred ),gamma+1 )
 
 	# Shape: []
 	return _tf.math.reduce_mean( focaldiceloss )
@@ -109,34 +99,33 @@ def FocalSoftDiceLoss( y_true, y_pred, gamma=0 ):
 
 #DEF
 #@_tf.function
-def MAE( y_true, y_pred ):
+def MAE( y_true, y_pred, gamma=0 ):
 
 	mae = _tf.math.abs( y_true-y_pred )
 
 	# Shape: []
-	return _tf.math.reduce_mean( mae )
+	return _tf.math.reduce_mean( _tf.math.pow( mae,gamma+1 ) )
 #ENDDEF
 
 
 #DEF
 #@_tf.function
-def BCE( y_true, y_pred ):
+def BCE( y_true, y_pred, gamma=0 ):
 
-	bce = -1 * ( y_true*_tf.math.log(EPS + y_pred) \
-		+ (1-y_true)*_tf.math.log(EPS + 1-y_pred) )
+	bce = -1.0 * ( y_true*_tf.math.log( EPS + y_pred ) \
+		+ (1.0-y_true)*_tf.math.log( EPS + 1.0-y_pred ) )
 	
 	# Shape: []
-	return _tf.math.reduce_mean( bce )
+	return _tf.math.reduce_mean( _tf.math.pow( bce,gamma+1 ) )
 #ENDDEF
 
 #DEF
 #@_tf.function
 def CombinedLoss( oh,probs,gamma ):
 
-#	iou_mean = FocalIOULoss( oh,probs,gamma )
-	iou_mean = SoftIOULoss( oh,probs )
-	mae_mean = MAE( oh,probs )
-	bce_mean = BCE( oh,probs )
+	iou_mean = FocalSoftDiceLoss( oh,probs,gamma )
+	mae_mean = MAE( oh,probs,gamma )
+	bce_mean = BCE( oh,probs,gamma )
 
 	total_loss_mean = iou_mean + mae_mean + bce_mean
 

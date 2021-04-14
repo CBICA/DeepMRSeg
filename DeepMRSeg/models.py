@@ -1,15 +1,11 @@
-"""
-Created on Mon Jul  3 14:27:26 2017
 
-@author: jimit
-"""
 ################################################ DECLARATIONS ################################################
 __author__ 	= 'Jimit Doshi'
 __EXEC_NAME__ 	= "model"
 
 import tensorflow as _tf
 
-from .unet_vanilla 	import unet_vanilla, unet_vanilla_bn
+from .unet_vanilla 	import unet_vanilla, unet_vanilla_norm
 from .unet_resinc 	import unet_resinc
 from .unet_resnet 	import unet_resnet
 
@@ -24,7 +20,8 @@ def create_model( 	num_classes=2, \
 			depth=4, \
 			num_modalities=1, \
 			layers=1, \
-			lite=False ):
+			lite=False, \
+			norm='batch' ):
 			
 	#####################
 	#### INPUT LAYER ####
@@ -47,8 +44,8 @@ def create_model( 	num_classes=2, \
 	if arch == 'UNet_vanilla':
 		arch_func = unet_vanilla
 
-	elif arch == 'UNet_vanilla_bn':
-		arch_func = unet_vanilla_bn
+	elif arch == 'UNet_vanilla_norm':
+		arch_func = unet_vanilla_norm
 					
 	elif arch == 'ResInc':
 		arch_func = unet_resinc
@@ -65,7 +62,8 @@ def create_model( 	num_classes=2, \
 							filters=filters, \
 							layers=layers, \
 							num_classes=num_classes, \
-							lite=lite )
+							lite=lite, \
+							norm=norm )
 							
 	#######################
 	##### PREDICTIONS #####
