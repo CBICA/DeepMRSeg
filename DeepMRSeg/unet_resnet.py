@@ -64,6 +64,13 @@ def unet_resnet( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 	# FOR ENCODING BLOCKS
 	for i in range(0,depth+1):
 	
+		### Dropout for first 3 layers
+		if i<3:
+			conv = _tf.keras.layers.Dropout( 0.25 )( conv )
+		else:
+			conv = _tf.keras.layers.Dropout( 0.5 )( conv )
+		print(conv)
+
 		### Downsample once
 		if i>0:
 			# IF LITE NETWORK
@@ -104,7 +111,9 @@ def unet_resnet( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 		### Dropout for first 3 layers
 		if i<3:
 			conv = _tf.keras.layers.Dropout( 0.5 )( conv )
-			print(conv)
+		else:
+			conv = _tf.keras.layers.Dropout( 0.25 )( conv )
+		print(conv)
 
 		### Upsample once
 		conv = conv_layer_resample_v1( inp=conv, \
