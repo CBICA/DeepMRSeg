@@ -23,6 +23,7 @@ from .optimizers import getAdamOpt, getRMSOpt, getSGDOpt, getMomentumOpt
 from .layers import get_onehot
 
 from . import pythonUtilities
+from . import utils
 
 ################################################ FUNCTIONS ################################################
 
@@ -104,7 +105,7 @@ def read_flags():
 				help="exponential_decay for the learning rate" )
 	trainArgs.add_argument( "--patience", default=5, type=int, \
 				help="number of epochs to wait without improvement" )
-	trainArgs.add_argument( "--gamma", default=0, type=float, \
+	trainArgs.add_argument( "--gamma", default=1, type=float, \
 				help="modulating factor for the losses" )
 	trainArgs.add_argument( "--max_to_keep", default=5, type=int, \
 				help="number of best performing models to keep")
@@ -125,6 +126,9 @@ def read_flags():
 	trainArgs.add_argument( "--norm", default='batch', type=str, \
 				help="normalization layer to use \
 					 choose from { 'batch', 'instance' }")
+	trainArgs.add_argument( "--alpha", default=50, type=float, \
+				help="weighted loss of the form \
+					loss = alpha*dice_loss + (100-alpha)*(mae+bce)")
 
 #	MISC
 #	====
@@ -133,6 +137,8 @@ def read_flags():
 				help="verbosity")
 	miscArgs.add_argument( "--nJobs", default=None, type=int, \
 				help="number of jobs/threads" )
+	miscArgs.add_argument( "--summary", default=False, action="store_true", \
+				help="write out summaries to mdlDir to be viewed using tensorboard" )
 
 #	FLAGS
 #	=====
@@ -249,7 +255,7 @@ def _main():
 
 	### Print parsed args
 	print( "\nPackage Versions" )
-	print( "python \t\t: %s" % (_platform.python_version()) )	
+	print( "python \t\t: %s" % (_platform.python_version()) )
 	print( "tensorflow \t: %s" % (_tf.__version__) )
 	print( "numpy \t\t: %s" % (_np.__version__) )
 	
@@ -279,6 +285,7 @@ def _main():
 	print("Learning Rate \t: %s" % (FLAGS.learning_rate))
 	print("LR Schedule \t: %s" % (FLAGS.LR_sch))
 	print("Decay Factor \t: %s" % (FLAGS.decay))
+	print("Loss Weight \t: %s" % (FLAGS.alpha))
 	print("Gamma Factor \t: %s" % (FLAGS.gamma))
 	print("Batch Size \t: %d" % (FLAGS.batch))
 	print("Filter Num \t: %d" % (FLAGS.filters))
@@ -337,8 +344,8 @@ def _main():
 #	******************************************
 #	* COMMENTED OUT ONLY FOR EXPERIMENTATION *
 #	******************************************
-	# Randomize list
-	_shuffle( all_sublist )
+#	# Randomize list
+#	_shuffle( all_sublist )
 
 	# Split into training and validation lists
 	p = _np.int( len( all_sublist ) * 0.2 )
@@ -454,7 +461,8 @@ def _main():
 		print("\n")
 		val_ds = data_reader( filenames=val_filenames, \
 						reader_func=tfrecordreader, \
-						batch_size=1, \
+#						batch_size=1, \
+						batch_size=FLAGS.batch, \
 						mode=_tf.estimator.ModeKeys.EVAL )
 						
 	# ENDWITH CPU DEVICE
@@ -470,7 +478,7 @@ def _main():
 				num_modalities=num_modalities, \
 				layers=FLAGS.layers, \
 				lite=FLAGS.lite, \
-				norm=FLAGS.norm )		
+				norm=FLAGS.norm )
 	model.summary( line_length=150 )
 
 	#####################
@@ -490,8 +498,6 @@ def _main():
 		optimizer = getMomentumOpt( FLAGS.learning_rate )
 	# ENDIF OPTIMIZER
 	
-	optimizer = _tf.keras.optimizers.Adam( FLAGS.learning_rate )
-		
 
 	######################
 	### TRAIN NETWORK  ###
@@ -515,22 +521,29 @@ def _main():
 	epoch_val_mael_avg = _tf.keras.metrics.Mean()
 	epoch_val_bcel_avg = _tf.keras.metrics.Mean()
 
+	# DEF TRAIN_STEP
 	@_tf.function
 	def train_step( x,y ):
+		# WITH
 		with _tf.GradientTape() as tape:
 			preds_d1,probs_d1,preds_d2,probs_d2,preds_d4,probs_d4 = model( x, training=True)
 
 			oh_d1 = get_onehot( y,FLAGS.label_smoothing,FLAGS.xy_width,FLAGS.num_classes )
 
 			total_loss, total_loss_d1, iou_d1, mae_d1, bce_d1 = losses.getCombinedLoss( oh_d1,probs_d1,probs_d2,probs_d4,\
-													FLAGS.gamma,FLAGS.deep_supervision,FLAGS.xy_width )
+													FLAGS.gamma,FLAGS.deep_supervision,\
+													FLAGS.xy_width,FLAGS.alpha )
+			total_loss_mean = _tf.math.reduce_mean(total_loss)
+		# ENDWITH
 
-		grads = tape.gradient( total_loss, model.trainable_weights )
+#		grads = tape.gradient( total_loss, model.trainable_weights )
+		grads = tape.gradient( total_loss_mean, model.trainable_weights )
 		optimizer.apply_gradients( zip(grads, model.trainable_weights) )
 		
 		iou_train.update_state( _tf.squeeze(y),preds_d1 )
 
 		return total_loss_d1, iou_d1, mae_d1, bce_d1
+	# ENDDEF TRAIN_STEP
 
 	@_tf.function
 	def test_step( x,y ):
@@ -538,11 +551,11 @@ def _main():
 
 		oh_d1 = get_onehot( y,0,FLAGS.xy_width,FLAGS.num_classes )
 		
-		total_loss_d1, iou_d1, mae_d1, bce_d1 = losses.CombinedLoss( oh_d1,probs_d1,0 )
+		total_loss_d1, iou_d1, mae_d1, bce_d1 = losses.CombinedLoss( oh_d1,probs_d1,1,50 )
 		
 		iou_test.update_state( _tf.squeeze(y),preds_d1 )
 
-		return total_loss_d1, iou_d1, mae_d1, bce_d1
+		return total_loss_d1, iou_d1, mae_d1, bce_d1, preds_d1
 
 #	@_tf.function
 	def set_lr( e,plat ):
@@ -581,6 +594,15 @@ def _main():
 	
 	# Get start time
 	est = _time.time()
+
+	# Setup summary writers 
+	if FLAGS.summary:
+		import datetime as _datetime
+		current_time = _datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+		train_log_dir = FLAGS.mdlDir + '/logs/gradient_tape/' + current_time + '/train'
+		test_log_dir = FLAGS.mdlDir + '/logs/gradient_tape/' + current_time + '/test'
+		train_summary_writer = _tf.summary.create_file_writer(train_log_dir)
+		test_summary_writer = _tf.summary.create_file_writer(test_log_dir)
 
 	### Import saved model from location 'loc' into local graph
 	#IF
@@ -658,7 +680,7 @@ def _main():
 
 		# Run a validation loop at the end of each epoch.
 		for step, (x_batch_val, y_batch_val) in enumerate(val_ds):
-			ttl,tioul,tmael,tbcel = test_step(x_batch_val, y_batch_val)
+			ttl,tioul,tmael,tbcel,tpreds = test_step(x_batch_val, y_batch_val)
 
 			# Add current batch loss
 			epoch_val_loss_avg.update_state( ttl )
@@ -718,6 +740,39 @@ def _main():
 				loss_min.min(), loss_min.max() ) )
 
 		_sys.stdout.flush()
+
+		### Write summaries
+		#IF
+		if FLAGS.summary:
+			# training
+			with train_summary_writer.as_default():
+				### losses
+				_tf.summary.scalar( 'total loss', epoch_train_loss_avg.result(), step=epoch )
+				_tf.summary.scalar( 'iou loss', epoch_train_ioul_avg.result(), step=epoch )
+				_tf.summary.scalar( 'mae loss', epoch_train_mael_avg.result(), step=epoch )
+				_tf.summary.scalar( 'bce loss', epoch_train_bcel_avg.result(), step=epoch )
+
+				### metrics
+				_tf.summary.scalar( 'mIOU', iou_train.result(), step=epoch )
+
+			with test_summary_writer.as_default():
+				### losses
+				_tf.summary.scalar( 'total loss', epoch_val_loss_avg.result(), step=epoch )
+				_tf.summary.scalar( 'iou loss', epoch_val_ioul_avg.result(), step=epoch )
+				_tf.summary.scalar( 'mae loss', epoch_val_mael_avg.result(), step=epoch )
+				_tf.summary.scalar( 'bce loss', epoch_val_bcel_avg.result(), step=epoch )
+
+				### metrics
+				_tf.summary.scalar( 'mIOU', iou_test.result(), step=epoch )
+
+				### images
+				# Log the confusion matrix as an image summary.
+				figure = utils.plot_confusion_matrix( iou_test.total_cm.numpy().astype('int'), \
+									class_names=_np.arange(FLAGS.num_classes) )
+				cm_image = utils.plot_to_image(figure)
+				_tf.summary.image( "Confusion Matrix", cm_image, step=epoch )
+
+		#ENDIF
 
 		# Reset metrics at the end of each epoch
 		iou_train.reset_states(); iou_test.reset_states()
