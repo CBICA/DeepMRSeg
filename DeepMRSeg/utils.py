@@ -21,8 +21,10 @@ def plot_confusion_matrix(cm, class_names):
 		cm (array, shape = [n, n]): a confusion matrix of integer classes
 		class_names (array, shape = [n]): String names of the integer classes
 	"""
-
+	# Normalize confusion matrix
 	cm_n = cm / cm.sum(axis=1)[:, _np.newaxis]
+
+	# Prepare figure
 	figure = _plt.figure(figsize=(8,8))
 	_plt.imshow( cm_n, interpolation='nearest', cmap=_plt.cm.Blues)
 	_plt.title("Confusion matrix")

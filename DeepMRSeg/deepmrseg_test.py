@@ -205,7 +205,7 @@ def resample_ens( inImg,inImg_res_F,ens,ens_ref,c ):
 	ens_f_res = _nibp.resample_from_to( ens_f, inImg, order=1 ) #order=0 seems to produce the same results
 	ens_ref[ :,:,:,c ] = ens_f_res.get_data()
 
-	del ens_f, ens_f_res	
+	del ens_f, ens_f_res
 #ENDDEF
 
 #DEF
@@ -259,7 +259,7 @@ def saveOutput( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
 	### Encode indices to rois if provided
 	ens_pred_enc = _np.zeros_like( ens_pred )
 	#FOR
-	for i in range( len(roi_indices) ):	
+	for i in range( len(roi_indices) ):
 		ind,roi = roi_indices[i]
 		ens_pred_enc = _np.where( ens_pred==int(ind), int(roi), ens_pred_enc )
 	#ENDFOR
@@ -306,14 +306,17 @@ def predictClasses( refImg, otherImg, num_classes, allmodels, roi_indices, out=N
 			xy_width=xy_width, \
 			rescalemethod=rescalemethod )
 
-	ens = runModel( im_dat, num_classes, allmodels, batch_size, nJobs )
+	ens = runModel( im_dat=im_dat, num_classes=num_classes, \
+			allmodels=allmodels, bs=batch_size )
 
+	#IF OUTFILE PROVIDED
 	if out:
 		saveOutput( ens, refImg, num_classes, roi_indices, out=out, probs=probs, \
 			rescalemethod=rescalemethod, ressize=ressize, orient=orient, xy_width=xy_width, nJobs=nJobs )
 	else:
 		return saveOutput( ens, refImg, num_classes, roi_indices, out=out, probs=probs, \
 			rescalemethod=rescalemethod, ressize=ressize, orient=orient, xy_width=xy_width, nJobs=nJobs )
+	#ENDIF OUTFILE PROVIDED
 #ENDDEF
 
 	

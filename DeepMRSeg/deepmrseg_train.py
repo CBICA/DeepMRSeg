@@ -159,6 +159,7 @@ def signal_handler(signal, frame):
 
 #CLASS TRAIN
 class Train(object):
+
 	"""Train class.
 	Args:
 	  model: DeepMRSeg model.
@@ -169,7 +170,7 @@ class Train(object):
 	"""
 
 	#DEF INIT
-	def __init__( self, model, strategy, optimizer, num_gpu, FLAGS ):	
+	def __init__( self, model, strategy, optimizer, num_gpu, FLAGS ):
 		### Define Variables
 		self.model = model
 		self.strategy = strategy
@@ -267,8 +268,8 @@ class Train(object):
 		with _tf.GradientTape() as tape:
 			# Run model
 			preds_d1,probs_d1, \
-			preds_d2,probs_d2, \
-			preds_d4,probs_d4 = self.model( img, training=True )
+			_,probs_d2, \
+			_,probs_d4 = self.model( img, training=True )
 			
 			# Calculate losses
 			total_loss_rep = self.compute_loss( oh_d1,probs_d1,probs_d2,probs_d4 )
@@ -311,13 +312,13 @@ class Train(object):
 		  val_dist_dataset: Validation dataset created using strategy.
 		  strategy: Distribution strategy.
 		"""
-	
+		### Import modules
 		import shutil as _shutil
 
 		# DEF DIST_TRAIN_EPOCH
 		@_tf.function
 		def distributed_train_epoch(ds):
-			per_replica_losses = strategy.run( self.train_step, args=(ds,) )
+			strategy.run( self.train_step, args=(ds,) )
 		# ENDDEF DIST_TRAIN_EPOCH
 
 		# DEF DIST_VAL_EPOCH
@@ -336,7 +337,7 @@ class Train(object):
 			return _np.array(arr_list)
 		# ENDDEF
 
-		# Setup summary writers 
+		# Setup summary writers
 		#IF
 		if self.summary:
 			import datetime as _datetime
@@ -354,7 +355,6 @@ class Train(object):
 	
 		# Get start time
 		est = _time.time()
-		i = 0
 		
 		# Min loss at each epoch
 		loss_min = _np.ones( self.max_to_keep ) * 100000
@@ -503,9 +503,7 @@ class Train(object):
 					_tf.summary.image( "Confusion Matrix", cm_image, step=epoch )
 				#ENDWITH
 			#ENDIF
-
-
-		# ENDFOR EACH EPOCH			
+		# ENDFOR EACH EPOCH		
    	# ENDDEF CUSTOM_LOOP
 #ENDCLASS TRAIN
 

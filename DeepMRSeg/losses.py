@@ -126,8 +126,8 @@ def getCombinedLoss( oh_d1,probs_d1,probs_d2,probs_d4,gamma,ds,xy,alpha ):
 
 	# IF
 	if ds:
-		total_loss_d2, iou_d2, mae_d2, bce_d2 = CombinedLoss( oh_d2,probs_d2,gamma,alpha )
-		total_loss_d4, iou_d4, mae_d4, bce_d4 = CombinedLoss( oh_d4,probs_d4,gamma,alpha )
+		total_loss_d2, _, _, _ = CombinedLoss( oh_d2,probs_d2,gamma,alpha )
+		total_loss_d4, _, _, _ = CombinedLoss( oh_d4,probs_d4,gamma,alpha )
 
 		total_loss = total_loss_d1 + 0.5*total_loss_d2 + 0.25*total_loss_d4
 	else:
