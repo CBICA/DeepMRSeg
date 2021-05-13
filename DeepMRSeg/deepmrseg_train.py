@@ -160,17 +160,18 @@ def signal_handler(signal, frame):
 #CLASS TRAIN
 class Train(object):
 
-	"""Train class.
-	Args:
-	  model: DeepMRSeg model.
-	  strategy: Distribution strategy in use.
-	  optimizer: Optimizer to use.
-	  num_gpu: Number of GPUs available.
-	  FLAGS: Other args
-	"""
+	"""Train class."""
 
 	#DEF INIT
 	def __init__( self, model, strategy, optimizer, num_gpu, FLAGS ):
+		"""Train class.
+		Args:
+		  model: DeepMRSeg model.
+		  strategy: Distribution strategy in use.
+		  optimizer: Optimizer to use.
+		  num_gpu: Number of GPUs available.
+		  FLAGS: Other args
+		"""
 		### Define Variables
 		self.model = model
 		self.strategy = strategy

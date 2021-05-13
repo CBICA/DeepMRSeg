@@ -117,6 +117,10 @@ class LoadModel():
 
 	# DEF
 	def __init__( self, checkpoint ):
+		"""
+		Args:
+			checkpoint: checkpoint to load
+		"""
 		self.model = _tf.keras.models.load_model(checkpoint)
 	# ENDDEF
 		
