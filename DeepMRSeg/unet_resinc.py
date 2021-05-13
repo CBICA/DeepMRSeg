@@ -22,7 +22,6 @@ def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 
 	skips = []
 	fm = [filters]
-	xy = inp_layer.shape.as_list()[1]
 
 	#####################
 	#### PROJECTION #####

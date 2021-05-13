@@ -22,7 +22,7 @@ from .data_io import loadrespadsave
 #DEF ARGPARSER
 def read_flags():
 	"""Returns flags"""
-
+	### Import modules
 	import argparse as _argparse
 
 	parser = _argparse.ArgumentParser( formatter_class=_argparse.ArgumentDefaultsHelpFormatter )
@@ -112,6 +112,7 @@ def signal_handler(signal, frame):
 
 #CLASS
 class LoadModel():
+
 	""" Loading SavedModel """
 
 	# DEF
@@ -122,7 +123,7 @@ class LoadModel():
 	# DEF
 	def run( self, im_slice ):
 		""" Running the activation operation previously imported """
-
+		# predict
 		_,prob,_,_,_,_ = self.model.predict( im_slice )
 		return prob
 	# ENDDEF

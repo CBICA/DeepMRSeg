@@ -21,7 +21,6 @@ from . import pythonUtilities
 # Usage info
 #DEF
 def help():
-
 	"""usage information"""
 	print(r"""
 %(EXEC)s--

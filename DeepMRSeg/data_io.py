@@ -4,7 +4,6 @@ __author__ 	= 'Jimit Doshi'
 __EXEC_NAME__ 	= "data_io"
 
 import os as _os
-import sys as _sys
 import numpy as _np
 
 from . import rescaleimages

@@ -12,7 +12,7 @@ import numpy as _np
 
 #DEF	
 def rescaleImage( image, minInt=0, maxInt=255, perc=99.9, method='minmax' ):
-	""" Rescale image intensities to specified range
+	""" Rescale image intensities to specified range.
 
 	Parameters
 	----------
@@ -39,7 +39,6 @@ def rescaleImage( image, minInt=0, maxInt=255, perc=99.9, method='minmax' ):
 	--------
 
 	"""
-	
 	### Convert image to float
 	image = image.astype('float')
 	

@@ -31,7 +31,7 @@ from . import utils
 #DEF ARGPARSER
 def read_flags():
 	"""Returns flags"""
-
+	### Import modules
 	import argparse as _argparse
 
 	parser = _argparse.ArgumentParser( formatter_class=_argparse.ArgumentDefaultsHelpFormatter )
@@ -552,7 +552,6 @@ def _main():
 	import tempfile as _tempfile
 	import shutil as _shutil
 	from random import shuffle as _shuffle
-	import glob as _glob
 	from concurrent.futures import ThreadPoolExecutor as _TPE
 
 	_sys.stdout.flush()
