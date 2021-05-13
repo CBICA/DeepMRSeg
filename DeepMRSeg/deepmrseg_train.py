@@ -109,7 +109,7 @@ def read_flags():
 				help="modulating factor for the losses" )
 	trainArgs.add_argument( "--max_to_keep", default=5, type=int, \
 				help="number of best performing models to keep")
-	trainArgs.add_argument( "--batch", default=5, type=int, \
+	trainArgs.add_argument( "--batch", default=8, type=int, \
 				help="batch size" )
 	trainArgs.add_argument( "--filters", default=16, type=int, \
 				help="number of filters in each layer")
@@ -154,6 +154,360 @@ def signal_handler(signal, frame):
 	print('Program interrupt signal received! Aborting operations ...')
 	_sys.exit(0)
 #ENDDEF
+
+############### CLASSES ###########
+
+#CLASS TRAIN
+class Train(object):
+	"""Train class.
+	Args:
+	  model: DeepMRSeg model.
+	  strategy: Distribution strategy in use.
+	  optimizer: Optimizer to use.
+	  num_gpu: Number of GPUs available.
+	  FLAGS: Other args
+	"""
+
+	#DEF INIT
+	def __init__( self, model, strategy, optimizer, num_gpu, FLAGS ):	
+		### Define Variables
+		self.model = model
+		self.strategy = strategy
+		self.optimizer = optimizer
+		self.num_gpu = num_gpu
+		self.num_epochs = FLAGS.num_epochs
+		self.min_epochs = FLAGS.min_epochs
+		self.batch_size = FLAGS.batch
+		self.learning_rate = FLAGS.learning_rate
+		self.decay = FLAGS.decay
+		self.lr_sch = FLAGS.LR_sch
+		self.patience = FLAGS.patience
+		self.gamma = FLAGS.gamma
+		self.alpha = FLAGS.alpha
+		self.global_batch_size = self.batch_size * self.num_gpu
+		self.label_smoothing = FLAGS.label_smoothing
+		self.deep_supervision = FLAGS.deep_supervision
+		self.xy_width = FLAGS.xy_width
+		self.num_classes = FLAGS.num_classes
+		self.mdlDir = FLAGS.mdlDir
+		self.max_to_keep = FLAGS.max_to_keep
+		self.summary = FLAGS.summary
+		
+		### Define Metrics
+		self.iou_train = _tf.keras.metrics.MeanIoU( num_classes=self.num_classes )
+		self.iou_val = _tf.keras.metrics.MeanIoU( num_classes=self.num_classes )
+
+		### Define Loss Aggregators
+		self.epoch_train_loss_avg = _tf.keras.metrics.Mean()
+		self.epoch_train_ioul_avg = _tf.keras.metrics.Mean()
+		self.epoch_train_mael_avg = _tf.keras.metrics.Mean()
+		self.epoch_train_bcel_avg = _tf.keras.metrics.Mean()
+		
+		self.epoch_val_loss_avg = _tf.keras.metrics.Mean()
+		self.epoch_val_ioul_avg = _tf.keras.metrics.Mean()
+		self.epoch_val_mael_avg = _tf.keras.metrics.Mean()
+		self.epoch_val_bcel_avg = _tf.keras.metrics.Mean()
+
+	#ENDDEF INIT
+
+	# DEF SET_LR
+	def set_lr( self,e,plat ):
+
+		if not hasattr( self.optimizer, "lr" ):
+			raise ValueError('Optimizer must have a "lr" attribute.')
+			
+		# Get the current learning rate from model's optimizer.
+		lr = _tf.keras.backend.get_value(self.optimizer.lr)
+		
+		#IF
+		if self.lr_sch == 'EXP':
+			new_lr = self.learning_rate * self.decay ** (e-1)
+		elif self.lr_sch == 'PLAT':
+			if plat >= self.patience/2:
+				new_lr = lr/2.
+				plat = 0
+			else:
+				new_lr = lr
+		#ENDIF
+		
+		# Set the value back to the optimizer before this epoch starts
+		_tf.keras.backend.set_value( self.optimizer.lr, new_lr )
+
+		return _tf.keras.backend.get_value(self.optimizer.lr), plat
+	# ENDDEF SET_LR
+		
+	# DEF COMPUTE_LOSS
+	@_tf.function
+	def compute_loss( self,one_h,probs_d1,probs_d2,probs_d4 ):
+
+		total_loss, total_loss_d1, \
+		iou_d1, mae_d1, bce_d1 = losses.getCombinedLoss( one_h,probs_d1,probs_d2,probs_d4,\
+								self.gamma,self.deep_supervision,\
+								self.xy_width,self.alpha )
+		
+		total_loss_rep = _tf.nn.compute_average_loss( total_loss, \
+					global_batch_size=self.global_batch_size )
+
+		self.epoch_train_loss_avg.update_state( total_loss_d1 )
+		self.epoch_train_ioul_avg.update_state( iou_d1 )
+		self.epoch_train_mael_avg.update_state( mae_d1 )
+		self.epoch_train_bcel_avg.update_state( bce_d1 )
+
+		return total_loss_rep
+	# ENDDEF COMPUTE_LOSS
+
+	# DEF TRAIN_STEP
+	@_tf.function
+	def train_step( self,inputs ):
+		
+		img,lab = inputs
+		oh_d1 = get_onehot( lab,self.label_smoothing,self.xy_width,self.num_classes )
+		
+		#WITH GRADIENTTAPE
+		with _tf.GradientTape() as tape:
+			# Run model
+			preds_d1,probs_d1, \
+			preds_d2,probs_d2, \
+			preds_d4,probs_d4 = self.model( img, training=True )
+			
+			# Calculate losses
+			total_loss_rep = self.compute_loss( oh_d1,probs_d1,probs_d2,probs_d4 )
+		#ENDWITH GRADIENTTAPE
+
+		grads = tape.gradient( total_loss_rep, self.model.trainable_weights )
+		self.optimizer.apply_gradients( zip(grads, self.model.trainable_weights) )
+
+		self.iou_train.update_state( lab,preds_d1 )
+
+		return total_loss_rep
+	# ENDDEF TRAIN_STEP
+
+	# DEF VAL_STEP
+	@_tf.function
+	def val_step( self,inputs ):
+		
+		img,lab = inputs
+		oh_d1 = get_onehot( lab,0,self.xy_width,self.num_classes )
+		
+		# Run model
+		preds_d1,probs_d1,_,_,_,_ = self.model( img, training=False )
+		
+		# Calculate losses
+		total_loss_d1, iou_d1, mae_d1, bce_d1 = losses.CombinedLoss( oh_d1,probs_d1,1,50 )
+		
+		self.iou_val.update_state( lab,preds_d1 )
+
+		self.epoch_val_loss_avg.update_state( total_loss_d1 )
+		self.epoch_val_ioul_avg.update_state( iou_d1 )
+		self.epoch_val_mael_avg.update_state( mae_d1 )
+		self.epoch_val_bcel_avg.update_state( bce_d1 )
+	# ENDDEF VAL_STEP
+
+	# DEF CUSTOM_LOOP
+	def custom_loop( self, train_dist_dataset, val_dist_dataset, strategy ):
+		"""Custom training and validation loop.
+		Args:
+		  train_dist_dataset: Training dataset created using strategy.
+		  val_dist_dataset: Validation dataset created using strategy.
+		  strategy: Distribution strategy.
+		"""
+	
+		import shutil as _shutil
+
+		# DEF DIST_TRAIN_EPOCH
+		@_tf.function
+		def distributed_train_epoch(ds):
+			per_replica_losses = strategy.run( self.train_step, args=(ds,) )
+		# ENDDEF DIST_TRAIN_EPOCH
+
+		# DEF DIST_VAL_EPOCH
+		@_tf.function
+		def distributed_val_epoch(ds):
+			strategy.run( self.val_step, args=(ds,) )
+		# ENDDEF DIST_VAL_EPOCH
+
+		# DEF 		
+		def pop_extend( arr,val ):
+			arr_list = arr.tolist()
+			if len(arr) >= self.patience:
+				arr_list.pop(0)
+			arr_list.extend( [val] )
+			
+			return _np.array(arr_list)
+		# ENDDEF
+
+		# Setup summary writers 
+		#IF
+		if self.summary:
+			import datetime as _datetime
+			current_time = _datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
+			train_log_dir = self.mdlDir + '/logs/gradient_tape/' + current_time + '/train'
+			val_log_dir = self.mdlDir + '/logs/gradient_tape/' + current_time + '/validation'
+			train_summary_writer = _tf.summary.create_file_writer(train_log_dir)
+			val_summary_writer = _tf.summary.create_file_writer(val_log_dir)
+		#ENDIF
+
+
+		### Training the network
+		print("\nTraining the network...\n")
+		_sys.stdout.flush()
+	
+		# Get start time
+		est = _time.time()
+		i = 0
+		
+		# Min loss at each epoch
+		loss_min = _np.ones( self.max_to_keep ) * 100000
+		loss_min_ind = _np.zeros( self.max_to_keep )
+
+		# Accuracy metric moving average
+		accu_train_recent = _np.array( [] )
+		accu_val_recent = _np.array( [] )
+
+		last_saved_mdl_counter = 0
+		last_lr_change_counter = 0
+		current_lr = self.learning_rate
+
+		# FOR EACH EPOCH
+		for epoch in range( 1,self.num_epochs+1 ):
+
+			### Stop training if loss_cov has reached its limit
+			#IF
+			if epoch > self.min_epochs:
+				if last_saved_mdl_counter >= self.patience:
+					print("Early stopping criteria met. Halt training...")
+					break
+			#ENDIF
+
+			### Set the learning rate based on the chosen schedule
+			current_lr,last_lr_change_counter = self.set_lr( epoch,last_lr_change_counter )
+
+			# Reset training metrics at the end of each epoch
+			self.iou_train.reset_states(); self.iou_val.reset_states()
+			self.epoch_train_loss_avg.reset_states(); self.epoch_val_loss_avg.reset_states()
+			self.epoch_train_ioul_avg.reset_states(); self.epoch_val_ioul_avg.reset_states()
+			self.epoch_train_mael_avg.reset_states(); self.epoch_val_mael_avg.reset_states()
+			self.epoch_train_bcel_avg.reset_states(); self.epoch_val_bcel_avg.reset_states()
+			
+
+			# Train
+			# FOR EACH TRAIN BATCH
+			for one_batch in train_dist_dataset:
+				distributed_train_epoch( one_batch )
+			# ENDFOR EACH TRAIN BATCH
+			
+			### Checkpoint model
+			self.model.save( _os.path.join( self.mdlDir \
+						+ '/checkpoint/model' ), \
+					overwrite=True, \
+					include_optimizer=True )
+
+			# Validate
+			# FOR EACH VAL BATCH
+			for one_batch in val_dist_dataset:
+				distributed_val_epoch( one_batch )
+			# ENDFOR EACH VAL BATCH
+
+			# Check if the latest model is in the top models
+			# IF
+			if ( self.epoch_val_loss_avg.result() < loss_min[0] ):
+
+				mdl_to_del = loss_min_ind[0]
+				mdl_to_del_path = _os.path.join( self.mdlDir \
+							+ '/bestmodels/model-' \
+							+ str( int(mdl_to_del) ) )
+							
+				if _os.path.isdir( mdl_to_del_path ):
+					_shutil.rmtree( mdl_to_del_path )
+			
+				loss_min[0] = self.epoch_val_loss_avg.result()
+				loss_min_ind[0] = epoch
+				loss_min_ind = loss_min_ind[ _np.argsort(loss_min)[::-1] ]
+				loss_min = loss_min[ _np.argsort(loss_min)[::-1] ]
+			
+				last_saved_mdl_counter = 0
+				last_lr_change_counter = 0
+			
+				self.model.save( _os.path.join( self.mdlDir \
+							+ '/bestmodels/model-' \
+							+ str(epoch) ), \
+						overwrite=True, \
+						include_optimizer=False )
+			else:
+				if epoch >= (self.min_epochs):
+					last_saved_mdl_counter += 1
+				
+				last_lr_change_counter += 1
+			# ENDIF
+
+			accu_train_recent = pop_extend( accu_train_recent,self.iou_train.result() )
+			accu_val_recent = pop_extend( accu_val_recent,self.iou_val.result() )
+			
+			timeperepoch = (_time.time()-est) / epoch / 60
+			print( "\n\tepoch : %d, time/epoch: %.2f mins, learning rates: %.1E" \
+					% ( epoch, timeperepoch, current_lr ) )
+
+			print( "\t\t training metrics \t: mIOU: %.4f (%.4f), Loss: %.4f (%.4f,%.4f,%.4f)" \
+					% ( self.iou_train.result(), accu_train_recent.mean(), \
+					self.epoch_train_loss_avg.result(), \
+					self.epoch_train_ioul_avg.result(), \
+					self.epoch_train_mael_avg.result(), \
+					self.epoch_train_bcel_avg.result() ) )
+
+			print( "\t\t validation metrics \t: mIOU: %.4f (%.4f), Loss: %.4f (%.4f,%.4f,%.4f) ( %.4f, %.4f )\n" \
+					% ( self.iou_val.result(), accu_val_recent.mean(), \
+					self.epoch_val_loss_avg.result(), \
+					self.epoch_val_ioul_avg.result(), \
+					self.epoch_val_mael_avg.result(), \
+					self.epoch_val_bcel_avg.result(), \
+					loss_min.min(), loss_min.max() ) )
+
+			_sys.stdout.flush()
+
+			### Write summaries
+			#IF
+			if self.summary:
+				### Training
+				#WITH
+				with train_summary_writer.as_default():
+					### losses
+					_tf.summary.scalar( 'total loss', self.epoch_train_loss_avg.result(), step=epoch )
+					_tf.summary.scalar( 'iou loss', self.epoch_train_ioul_avg.result(), step=epoch )
+					_tf.summary.scalar( 'mae loss', self.epoch_train_mael_avg.result(), step=epoch )
+					_tf.summary.scalar( 'bce loss', self.epoch_train_bcel_avg.result(), step=epoch )
+
+					### metrics
+					_tf.summary.scalar( 'mIOU', self.iou_train.result(), step=epoch )
+
+					### params
+					_tf.summary.scalar( 'learning rate', current_lr, step=epoch )
+				#ENDWITH
+
+				### Validation
+				#WITH
+				with val_summary_writer.as_default():
+					### losses
+					_tf.summary.scalar( 'total loss', self.epoch_val_loss_avg.result(), step=epoch )
+					_tf.summary.scalar( 'iou loss', self.epoch_val_ioul_avg.result(), step=epoch )
+					_tf.summary.scalar( 'mae loss', self.epoch_val_mael_avg.result(), step=epoch )
+					_tf.summary.scalar( 'bce loss', self.epoch_val_bcel_avg.result(), step=epoch )
+
+					### metrics
+					_tf.summary.scalar( 'mIOU', self.iou_val.result(), step=epoch )
+
+					### images
+					# Log the confusion matrix as an image summary.
+					figure = utils.plot_confusion_matrix( self.iou_val.total_cm.numpy(), \
+										class_names=_np.arange(self.num_classes) )
+					cm_image = utils.plot_to_image(figure)
+					_tf.summary.image( "Confusion Matrix", cm_image, step=epoch )
+				#ENDWITH
+			#ENDIF
+
+
+		# ENDFOR EACH EPOCH			
+   	# ENDDEF CUSTOM_LOOP
+#ENDCLASS TRAIN
 
 
 ############## MAIN ##############
@@ -344,8 +698,8 @@ def _main():
 #	******************************************
 #	* COMMENTED OUT ONLY FOR EXPERIMENTATION *
 #	******************************************
-#	# Randomize list
-#	_shuffle( all_sublist )
+	# Randomize list
+	_shuffle( all_sublist )
 
 	# Split into training and validation lists
 	p = _np.int( len( all_sublist ) * 0.2 )
@@ -406,6 +760,12 @@ def _main():
 	#ENDWITH
 
 	
+	#####################################
+	#### CREATE DISTRIBUTE STRATEGY #####
+	#####################################
+	print("\n")
+	print("Defining distribution strategy...")
+
 	# Check if CUDA_VISIBLE_DEVICES is set
 	#TRY
 	try:
@@ -416,6 +776,22 @@ def _main():
 	#ENDTRY
 	print( "CUDA_VISIBLE_DEVICES: %s" % (device_name) )
 	
+	
+	# If the list of devices is not specified in the
+	# `tf.distribute.MirroredStrategy` constructor, it will be auto-detected.
+	strategy = _tf.distribute.MirroredStrategy()
+	print( "\nSTRATEGY: %s" % (strategy) )
+	
+	
+	NUM_GPU_DEVICES = strategy.num_replicas_in_sync
+	print ( 'NUM_GPU_DEVICES: {}'.format(NUM_GPU_DEVICES) )
+	gpus = _tf.config.experimental.list_physical_devices('GPU')
+	print( gpus )
+
+	BATCH_SIZE_PER_REPLICA = FLAGS.batch
+	GLOBAL_BATCH_SIZE = BATCH_SIZE_PER_REPLICA * NUM_GPU_DEVICES
+	print("BATCH_SIZE_PER_REPLICA: %d" % (BATCH_SIZE_PER_REPLICA) )
+	print("GLOBAL_BATCH_SIZE: %d" % (GLOBAL_BATCH_SIZE) )
 
 	###########################
 	#### PREPARE DATASETS #####
@@ -453,7 +829,7 @@ def _main():
 		print("\n")
 		train_ds = data_reader( filenames=train_filenames, \
 						reader_func=tfrecordreader, \
-						batch_size=FLAGS.batch, \
+						batch_size=GLOBAL_BATCH_SIZE, \
 						mode=_tf.estimator.ModeKeys.TRAIN )
 
 	
@@ -461,326 +837,76 @@ def _main():
 		print("\n")
 		val_ds = data_reader( filenames=val_filenames, \
 						reader_func=tfrecordreader, \
-#						batch_size=1, \
-						batch_size=FLAGS.batch, \
+						batch_size=GLOBAL_BATCH_SIZE*8, \
 						mode=_tf.estimator.ModeKeys.EVAL )
 						
 	# ENDWITH CPU DEVICE
 
-	####################
-	### DEFINE MODEL ###
-	####################
-	print("\nDefining the network...\n")
-	model = create_model(	num_classes=FLAGS.num_classes, \
-				arch=FLAGS.arch, \
-				filters=FLAGS.filters, \
-				depth=FLAGS.depth, \
-				num_modalities=num_modalities, \
-				layers=FLAGS.layers, \
-				lite=FLAGS.lite, \
-				norm=FLAGS.norm )
-	model.summary( line_length=150 )
 
-	#####################
-	##### OPTIMIZER #####
-	#####################
-	print("\n")
-
-	# Initial Optimizer
-	# IF OPTIMIZER
-	if FLAGS.optimizer == 'Adam':
-		optimizer = getAdamOpt( FLAGS.learning_rate )
-	elif FLAGS.optimizer == 'RMSProp':
-		optimizer = getRMSOpt( FLAGS.learning_rate )
-	elif FLAGS.optimizer == 'SGD':
-		optimizer = getSGDOpt( FLAGS.learning_rate )
-	elif FLAGS.optimizer == 'Momentum':
-		optimizer = getMomentumOpt( FLAGS.learning_rate )
-	# ENDIF OPTIMIZER
-	
-
-	######################
-	### TRAIN NETWORK  ###
-	######################
-	print("\n")
-
-	### Training the network
-	print("\nTraining the network...\n")
+	####################################
+	### WITHIN DISTRIBUTED STRATEGY ####
+	####################################
+	print("\nWithin the Distributed Strategy...\n")
 	_sys.stdout.flush()
-	
-	iou_train = _tf.keras.metrics.MeanIoU( num_classes=FLAGS.num_classes )
-	iou_test = _tf.keras.metrics.MeanIoU( num_classes=FLAGS.num_classes )
 
-	epoch_train_loss_avg = _tf.keras.metrics.Mean()
-	epoch_train_ioul_avg = _tf.keras.metrics.Mean()
-	epoch_train_mael_avg = _tf.keras.metrics.Mean()
-	epoch_train_bcel_avg = _tf.keras.metrics.Mean()
-	
-	epoch_val_loss_avg = _tf.keras.metrics.Mean()
-	epoch_val_ioul_avg = _tf.keras.metrics.Mean()
-	epoch_val_mael_avg = _tf.keras.metrics.Mean()
-	epoch_val_bcel_avg = _tf.keras.metrics.Mean()
+	# WITH STRATEGY
+	with strategy.scope():
 
-	# DEF TRAIN_STEP
-	@_tf.function
-	def train_step( x,y ):
-		# WITH
-		with _tf.GradientTape() as tape:
-			preds_d1,probs_d1,preds_d2,probs_d2,preds_d4,probs_d4 = model( x, training=True)
+		### Create the model
+		print("\nDefining the network...\n")
+		model = create_model(	num_classes=FLAGS.num_classes, \
+					arch=FLAGS.arch, \
+					filters=FLAGS.filters, \
+					depth=FLAGS.depth, \
+					num_modalities=num_modalities, \
+					layers=FLAGS.layers, \
+					lite=FLAGS.lite, \
+					norm=FLAGS.norm )
+		model.summary( line_length=150 )
 
-			oh_d1 = get_onehot( y,FLAGS.label_smoothing,FLAGS.xy_width,FLAGS.num_classes )
+		# Define Optimizer
+		print("\nDefining the Optimizer...")
+		# IF OPTIMIZER
+		if FLAGS.optimizer == 'Adam':
+			optimizer = getAdamOpt( FLAGS.learning_rate )
+		elif FLAGS.optimizer == 'RMSProp':
+			optimizer = getRMSOpt( FLAGS.learning_rate )
+		elif FLAGS.optimizer == 'SGD':
+			optimizer = getSGDOpt( FLAGS.learning_rate )
+		elif FLAGS.optimizer == 'Momentum':
+			optimizer = getMomentumOpt( FLAGS.learning_rate )
+		# ENDIF OPTIMIZER
+		print( optimizer.get_config() )
 
-			total_loss, total_loss_d1, iou_d1, mae_d1, bce_d1 = losses.getCombinedLoss( oh_d1,probs_d1,probs_d2,probs_d4,\
-													FLAGS.gamma,FLAGS.deep_supervision,\
-													FLAGS.xy_width,FLAGS.alpha )
-			total_loss_mean = _tf.math.reduce_mean(total_loss)
-		# ENDWITH
-
-#		grads = tape.gradient( total_loss, model.trainable_weights )
-		grads = tape.gradient( total_loss_mean, model.trainable_weights )
-		optimizer.apply_gradients( zip(grads, model.trainable_weights) )
-		
-		iou_train.update_state( _tf.squeeze(y),preds_d1 )
-
-		return total_loss_d1, iou_d1, mae_d1, bce_d1
-	# ENDDEF TRAIN_STEP
-
-	@_tf.function
-	def test_step( x,y ):
-		preds_d1,probs_d1,_,_,_,_ = model( x, training=False )
-
-		oh_d1 = get_onehot( y,0,FLAGS.xy_width,FLAGS.num_classes )
-		
-		total_loss_d1, iou_d1, mae_d1, bce_d1 = losses.CombinedLoss( oh_d1,probs_d1,1,50 )
-		
-		iou_test.update_state( _tf.squeeze(y),preds_d1 )
-
-		return total_loss_d1, iou_d1, mae_d1, bce_d1, preds_d1
-
-#	@_tf.function
-	def set_lr( e,plat ):
-
-		if not hasattr( optimizer, "lr" ):
-			raise ValueError('Optimizer must have a "lr" attribute.')
+		### Import saved model from location 'loc' into local graph
+		#IF
+		if FLAGS.ckptDir and _os.path.isdir( FLAGS.ckptDir ):
+			print("\nRestoring model parameters from checkpoint...\n")
+			_sys.stdout.flush()
 			
-		# Get the current learning rate from model's optimizer.
-		lr = _tf.keras.backend.get_value(optimizer.lr)
-		
-		#IF
-		if FLAGS.LR_sch == 'EXP':
-			new_lr = FLAGS.learning_rate * FLAGS.decay ** (e-1)
-		elif FLAGS.LR_sch == 'PLAT':
-			if plat >= FLAGS.patience/4:
-				new_lr = lr/2.
-				plat = 0
-			else:
-				new_lr = lr
-		#ENDIF
-		
-		# Set the value back to the optimizer before this epoch starts
-		_tf.keras.backend.set_value( optimizer.lr, new_lr )
-
-		return _tf.keras.backend.get_value(optimizer.lr), plat
-	
-	# DEF	
-	def pop_extend( arr,val ):
-		arr_list = arr.tolist()
-		if len(arr) >= FLAGS.patience:
-			arr_list.pop(0)
-		arr_list.extend( [val] )
-		
-		return _np.array(arr_list)
-	# ENDDEF
-	
-	# Get start time
-	est = _time.time()
-
-	# Setup summary writers 
-	if FLAGS.summary:
-		import datetime as _datetime
-		current_time = _datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-		train_log_dir = FLAGS.mdlDir + '/logs/gradient_tape/' + current_time + '/train'
-		test_log_dir = FLAGS.mdlDir + '/logs/gradient_tape/' + current_time + '/test'
-		train_summary_writer = _tf.summary.create_file_writer(train_log_dir)
-		test_summary_writer = _tf.summary.create_file_writer(test_log_dir)
-
-	### Import saved model from location 'loc' into local graph
-	#IF
-	if FLAGS.ckptDir and _os.path.isdir( FLAGS.ckptDir ):
-		print("\nRestoring model parameters from checkpoint...\n")
-		_sys.stdout.flush()
-		
-		model = _tf.keras.models.load_model( FLAGS.ckptDir )
-	#ENDIF
-
-	i = 0
-	# Min loss at each epoch
-	loss_min = _np.ones( FLAGS.max_to_keep ) * 100000
-	loss_min_ind = _np.zeros( FLAGS.max_to_keep )
-
-	# Max accuracy at each epoch
-	accu_min = _np.zeros( FLAGS.max_to_keep )
-	accu_min_ind = _np.zeros( FLAGS.max_to_keep )
-	
-	# Accuracy metric moving average
-	accu_train_recent = _np.array( [] )
-	accu_val_recent = _np.array( [] )
-
-	last_saved_mdl_counter = 0
-	last_lr_change_counter = 0
-	current_lr = FLAGS.learning_rate
-
-	for epoch in range( 1,FLAGS.num_epochs+1 ):
-		start_time = _time.time()
-
-		### Stop training if loss_cov has reached its limit
-		#IF
-		if epoch > FLAGS.min_epochs:
-			if last_saved_mdl_counter >= FLAGS.patience:
-				print( i, epoch, last_saved_mdl_counter )
-				print("Early stopping criteria met. Halt training...")
-				break
+			model = _tf.keras.models.load_model( FLAGS.ckptDir )
 		#ENDIF
 
-		### Set the learning rate based on the chosen schedule
-		current_lr,last_lr_change_counter = set_lr( epoch,last_lr_change_counter )
-
-		# Iterate over the batches of the dataset.
-		for step, (x_batch_train, y_batch_train) in enumerate(train_ds):
-			ttl,tioul,tmael,tbcel = train_step( x_batch_train,y_batch_train )
-
-			# Add current batch loss
-			epoch_train_loss_avg.update_state( ttl )
-			epoch_train_ioul_avg.update_state( tioul )
-			epoch_train_mael_avg.update_state( tmael )
-			epoch_train_bcel_avg.update_state( tbcel )
-
-			# IF DISPLAY TRAINING METRICS
-			if i%1000 == 0:
-				timeperiter = (_time.time()-est) / (i+1) * 1000 / 60.
-
-				print( "\t\titerations : %d, time per %d iterations: %.2f mins" % \
-								( i, 1000, timeperiter ) )
-
-				print( "\t\t\t training metrics \t: ( emaLoss: %.4f (%.4f,%.4f,%.4f), learning rates: %.1E )" \
-						% (epoch_train_loss_avg.result(), \
-							epoch_train_ioul_avg.result(), epoch_train_mael_avg.result(), epoch_train_bcel_avg.result(), \
-							current_lr) )
-				
-				_sys.stdout.flush()
-			# ENDIF
-			
-			i += 1
-			
-		### Checkpoint model
-		model.save( _os.path.join( FLAGS.mdlDir \
-					+ '/checkpoint/model' ), \
-				overwrite=True, \
-				include_optimizer=True )
-
-		# Run a validation loop at the end of each epoch.
-		for step, (x_batch_val, y_batch_val) in enumerate(val_ds):
-			ttl,tioul,tmael,tbcel,tpreds = test_step(x_batch_val, y_batch_val)
-
-			# Add current batch loss
-			epoch_val_loss_avg.update_state( ttl )
-			epoch_val_ioul_avg.update_state( tioul )
-			epoch_val_mael_avg.update_state( tmael )
-			epoch_val_bcel_avg.update_state( tbcel )
-
-		# IF
-		if ( epoch_val_loss_avg.result() < loss_min[0] ):
-
-			mdl_to_del = loss_min_ind[0]
-			if _os.path.isdir( _os.path.join( FLAGS.mdlDir \
-						+ '/bestmodels/model-' \
-						+ str( int(mdl_to_del) ) ) ):
-				_shutil.rmtree( _os.path.join( FLAGS.mdlDir \
-							+ '/bestmodels/model-' \
-							+ str( int(mdl_to_del) ) ) )
+		### Create distributed datasets
+		print("\nDistributed datasets...")
+		train_ds_dist = strategy.experimental_distribute_dataset( train_ds )
+		print( train_ds_dist )
 		
-			loss_min[0] = epoch_val_loss_avg.result()
-			loss_min_ind[0] = epoch
-			loss_min_ind = loss_min_ind[ _np.argsort(loss_min)[::-1] ]
-			loss_min = loss_min[ _np.argsort(loss_min)[::-1] ]
+		val_ds_dist = strategy.experimental_distribute_dataset( val_ds )
+		print( val_ds_dist )
+
+		### Create the Train object
+		trainer = Train( model, strategy, optimizer, NUM_GPU_DEVICES, FLAGS )
 		
-			last_saved_mdl_counter = 0
-			last_lr_change_counter = 0
+		### Train the model
+		trainer.custom_loop( train_ds_dist, val_ds_dist, strategy )
+	# ENDWITH STRATEGY
+
+
+
 		
-			model.save( _os.path.join( FLAGS.mdlDir \
-						+ '/bestmodels/model-' \
-						+ str(epoch) ), \
-					overwrite=False, \
-					include_optimizer=False )
-		else:
-			if epoch >= (FLAGS.min_epochs):
-				last_saved_mdl_counter += 1
-			
-			last_lr_change_counter += 1
-		# ENDIF
 
-		accu_train_recent = pop_extend( accu_train_recent,iou_train.result() )
-		accu_val_recent = pop_extend( accu_val_recent,iou_test.result() )
-		
-		timeperepoch = (_time.time()-est) / epoch / 60
-		print( "\n\tepoch : %d, time/epoch: %.2f mins, learning rates: %.1E" \
-				% ( epoch, timeperepoch, current_lr ) )
 
-		print( "\t\t training metrics \t: mIOU: %.4f (%.4f), Loss: %.4f (%.4f,%.4f,%.4f)" \
-				% ( iou_train.result(), accu_train_recent.mean(), \
-				epoch_train_loss_avg.result(), \
-				epoch_train_ioul_avg.result(), epoch_train_mael_avg.result(), \
-				epoch_train_bcel_avg.result() ) )
-
-		print( "\t\t validation metrics \t: mIOU: %.4f (%.4f), Loss: %.4f (%.4f,%.4f,%.4f) ( %.4f, %.4f )\n" \
-				% ( iou_test.result(), accu_val_recent.mean(), \
-				epoch_val_loss_avg.result(), \
-				epoch_val_ioul_avg.result(), epoch_val_mael_avg.result(), \
-				epoch_val_bcel_avg.result(), \
-				loss_min.min(), loss_min.max() ) )
-
-		_sys.stdout.flush()
-
-		### Write summaries
-		#IF
-		if FLAGS.summary:
-			# training
-			with train_summary_writer.as_default():
-				### losses
-				_tf.summary.scalar( 'total loss', epoch_train_loss_avg.result(), step=epoch )
-				_tf.summary.scalar( 'iou loss', epoch_train_ioul_avg.result(), step=epoch )
-				_tf.summary.scalar( 'mae loss', epoch_train_mael_avg.result(), step=epoch )
-				_tf.summary.scalar( 'bce loss', epoch_train_bcel_avg.result(), step=epoch )
-
-				### metrics
-				_tf.summary.scalar( 'mIOU', iou_train.result(), step=epoch )
-
-			with test_summary_writer.as_default():
-				### losses
-				_tf.summary.scalar( 'total loss', epoch_val_loss_avg.result(), step=epoch )
-				_tf.summary.scalar( 'iou loss', epoch_val_ioul_avg.result(), step=epoch )
-				_tf.summary.scalar( 'mae loss', epoch_val_mael_avg.result(), step=epoch )
-				_tf.summary.scalar( 'bce loss', epoch_val_bcel_avg.result(), step=epoch )
-
-				### metrics
-				_tf.summary.scalar( 'mIOU', iou_test.result(), step=epoch )
-
-				### images
-				# Log the confusion matrix as an image summary.
-				figure = utils.plot_confusion_matrix( iou_test.total_cm.numpy().astype('int'), \
-									class_names=_np.arange(FLAGS.num_classes) )
-				cm_image = utils.plot_to_image(figure)
-				_tf.summary.image( "Confusion Matrix", cm_image, step=epoch )
-
-		#ENDIF
-
-		# Reset metrics at the end of each epoch
-		iou_train.reset_states(); iou_test.reset_states()
-
-		epoch_train_loss_avg.reset_states(), epoch_val_loss_avg.reset_states()
-		epoch_train_ioul_avg.reset_states(), epoch_val_ioul_avg.reset_states()
-		epoch_train_mael_avg.reset_states(), epoch_val_mael_avg.reset_states()
-		epoch_train_bcel_avg.reset_states(), epoch_val_bcel_avg.reset_states()
 
 	### Remove tmpDir and its contents, if not user defined
 	#IF
@@ -797,7 +923,8 @@ def _main():
 	print("\nResource usage for this process")
 	print("\tetime \t:", _np.round( ( _time.time() - startTimeStamp )/60, 2 ), "mins")
 	
-	#resource package only available in Unix
+	# Resource package only available in Unix
+	#IF
 	if _platform.system() != 'Windows':
 		import resource as _resource
 		rus = _resource.getrusage(0)
@@ -806,6 +933,7 @@ def _main():
 		print("\tmaxrss \t:", _np.round( rus.ru_maxrss / 1.e6, 2 ), "GB")
 		
 		_sys.stdout.flush()
+	#ENDIF
 # ENDDEF MAIN
 	
 
