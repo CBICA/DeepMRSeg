@@ -418,16 +418,6 @@ def _main():
 	import csv as _csv
 	from concurrent.futures import ThreadPoolExecutor as _TPE
 
-	# Check if CUDA_VISIBLE_DEVICES is set
-	#TRY
-	try:
-		_os.environ["CUDA_VISIBLE_DEVICES"]
-		device_name = _os.environ["CUDA_VISIBLE_DEVICES"]
-	except:
-		device_name = 0
-	#ENDTRY
-	print( "CUDA_VISIBLE_DEVICES: %s" % (device_name) )
-	
 	
 	##########################
 	#### LOAD ALL MODELS #####
