@@ -73,6 +73,8 @@ def read_flags():
 	inpArgs.add_argument( "--reorient", default='LPS', type=str, \
 				help="reorient the testing images to match the \
 					provided orientation (in radiology convention)" )
+	inpArgs.add_argument( "--batch", default=64, type=int, \
+				help="batch size" )
 
 #	OUTPUT
 #	========
@@ -115,7 +117,6 @@ class LoadModel():
 	# DEF
 	def __init__( self, checkpoint ):
 		self.model = _tf.keras.models.load_model(checkpoint)
-
 	# ENDDEF
 		
 	# DEF
@@ -165,52 +166,69 @@ def loadModel( models,cp ):
 #ENDDEF	
 
 #DEF
-def extractData( refImg, otherImg, rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320 ):
-
-	return extractDataForSubject( \
-			otherImg=otherImg, \
-			refImg=refImg, \
-			ressize=ressize, \
-			orient=orient, \
-			xy_width=xy_width, \
-			rescalemethod=rescalemethod )
-#ENDDEF
-
-#DEF
-def runModel( im_dat, num_classes, allmodels ):
+def runModel( im_dat, num_classes, allmodels, bs ):
 
 	### Create array to store output probabilities
 	val_prob = _np.zeros( ( im_dat.shape[0:3] + (num_classes,len(allmodels)) ) )
 
-	# Launch testing
-	
-	# FOR EACH SLICE	
-	for i in range( im_dat.shape[0] ):
-		# FOR EACH MODEL
-		for c in range( len(allmodels) ):
-			val_prob[i,:,:,:,c] = allmodels[c].run( im_dat[i].reshape( (1,)+im_dat[i].shape ) )
-		# ENDFOR EACH MODEL
-	# ENDFOR EACH SLICE
+	### Create a tf Dataset from im_dat
+	im_dat_ds = _tf.data.Dataset.from_tensor_slices( (im_dat) ).batch( bs )
 
+	# Launch testing
+	# FOR EACH MODEL
+	for c in range( len(allmodels) ):
+		i = 0
+		# FOR EACH BATCH OF SLICES
+		for one_batch in im_dat_ds:
+			bs = one_batch.shape[0]
+			val_prob[i:i+bs,:,:,:,c] = allmodels[c].run( one_batch )
+			i += bs
+		# ENDFOR EACH BATCH OF SLICES
+	# ENDFOR EACH MODEL
 
 	### Reshuffle predictions from [z,x,y,c,m] -> [x,y,z,c,m]
-	val_prob = _np.moveaxis( val_prob,0,2 )
-	ens = val_prob.mean( axis=-1 )
-
-	del val_prob, im_dat
+	ens = _np.moveaxis( val_prob,0,2 ).astype('float32').mean( axis=-1 )
+	del val_prob, im_dat_ds
 
 	return ens
 #ENDDEF
 
 #DEF
-def saveOutput( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
-			rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320 ):
+def resample_ens( inImg,inImg_res_F,ens,ens_ref,c ):
 
 	### Import more modules
 	import nibabel as _nib
 	import nibabel.processing as _nibp
-	from scipy.ndimage.interpolation import zoom as _zoom
+
+	ens_f = _nib.Nifti1Image( ens[ :,:,:,c ], inImg_res_F.affine, inImg_res_F.header )
+	ens_f_res = _nibp.resample_from_to( ens_f, inImg, order=1 ) #order=0 seems to produce the same results
+	ens_ref[ :,:,:,c ] = ens_f_res.get_data()
+
+	del ens_f, ens_f_res	
+#ENDDEF
+
+#DEF
+def save_output_probs( ens_ref,ind,roi,inImg,out ):
+
+	### Import more modules
+	import nibabel as _nib
+
+	outImgDat = ens_ref[:,:,:,ind].copy()
+	outImgDat = _np.where( outImgDat<0.01, 0, outImgDat )
+
+	outImgDat_img = _nib.Nifti1Image( outImgDat, inImg.affine, inImg.header )
+	outImgDat_img.set_data_dtype( 'float32' )
+	outImgDat_img.to_filename( _os.path.join( out[:-7] + '_probabilities_' + str(roi) + '.nii.gz' ) )
+#ENDDEF
+
+#DEF
+def saveOutput( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
+			rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320, nJobs=1 ):
+
+	### Import more modules
+	import nibabel as _nib
 	import csv as _csv
+	from concurrent.futures import ThreadPoolExecutor as _TPE
 
 	### Read reference image
 	inImg = _nib.load( refImg )
@@ -224,86 +242,61 @@ def saveOutput( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
 					rescalemethod=rescalemethod, \
 					out_path=None )
 
-	### Prepare inImg as a 4-dim image
-	inImg_4d = _nib.Nifti1Image( _np.zeros( (inImg.shape+(num_classes,)),dtype=_np.int8 ), inImg.affine, inImg.header )
-	inImg_4d.header.set_zooms( (inImg.header.get_zooms() + (1.0,) ) )
+	### Re-orient, resample and resize ens to the refImg space
+	ens_ref = _np.zeros( (inImg.shape+(num_classes,)),dtype='float32' )
+	#WITH
+	with _TPE( max_workers=nJobs ) as executor:
+		#FOR
+		for c in range(num_classes):
+			executor.submit( resample_ens,inImg,inImg_res_F,ens,ens_ref,c )
+		#ENDFOR
+	#ENDWITH
 
-	### Prepare ens as a Nifti1Image
-	ens_f = _nib.Nifti1Image( ens, inImg_res_F.affine, inImg_res_F.header )
-	ens_f.header.set_zooms( (inImg_res_F.header.get_zooms() + (1.0,) ) )
-
-	### Re-orient, resample and resize ens_f to the refImg space
-	ens_f_ref = _nibp.resample_from_to( ens_f, inImg_4d )
-	del inImg_4d, ens_f
-	
-	### Get ens in refImg space
-	ens_ref = ens_f_ref.get_data()
+	### Get preds from ens
 	ens_pred = _np.argmax( ens_ref,axis=-1 )
-	ens_pred_enc = _np.zeros_like( ens_pred )
 
-	# encode indices to rois if provided
-	for i in range( len(roi_indices) ):
-	
+	### Encode indices to rois if provided
+	ens_pred_enc = _np.zeros_like( ens_pred )
+	#FOR
+	for i in range( len(roi_indices) ):	
 		ind,roi = roi_indices[i]
 		ens_pred_enc = _np.where( ens_pred==int(ind), int(roi), ens_pred_enc )
 	#ENDFOR
 
-	# clear memory
+	### Clear memory
 	del ens_pred
 
-
-	### Get outImg from probabilities
-	outImgDat_img = _nib.Nifti1Image( ens_pred_enc, inImg.affine, inImg.header )
-	outImgDat_img.set_data_dtype( 'uint8' )
-	outImgDat_img.to_filename( out )
 
 	### If probabilities need to be saved
 	#IF
 	if probs:
-		#FOR
-		for i in range( len(roi_indices) ):
-			
-			ind,roi = roi_indices[i]
-			
-			outImgDat = ens_ref[:,:,:,ind].copy()
-			outImgDat = _np.where( outImgDat<0.01, 0, outImgDat )
-	
-			outImgDat_img = _nib.Nifti1Image( outImgDat, inImg.affine, inImg.header )
-			outImgDat_img.set_data_dtype( 'float32' )
-			outImgDat_img.to_filename( _os.path.join( out[:-7] + '_probabilities_' + str(roi) + '.nii.gz' ) )
-		#ENDFOR
+		#WITH
+		with _TPE( max_workers=nJobs ) as executor:
+			#FOR
+			for i in range( len(roi_indices) ):
+				ind,roi = roi_indices[i]
+				executor.submit( save_output_probs,ens_ref,ind,roi,inImg,out )
+			#ENDFOR
+		#ENDWITH
 	#ENDIF
+
+	### Clear memory
+	del ens_ref
+
+	### Get outImg from probabilities
+	outImgDat_img = _nib.Nifti1Image( ens_pred_enc, inImg.affine, inImg.header )
+	outImgDat_img.set_data_dtype( 'uint8' )
+	if out:
+		outImgDat_img.to_filename( out )
+	else:
+		return outImgDat_img
+
 #ENDDEF
 
 #DEF
 def predictClasses( refImg, otherImg, num_classes, allmodels, roi_indices, out=None, probs=False, \
-			rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320 ):
+			rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320, batch_size=64, nJobs=1 ):
 
-	im_dat = extractData( refImg, otherImg, rescalemethod=rescalemethod, ressize=ressize, \
-				orient=orient, xy_width=xy_width )
-
-	ens = runModel( im_dat, num_classes, allmodels )
-
-	#IF
-	if out:
-		saveOutput( ens, refImg, num_classes, roi_indices, out=out, probs=probs, \
-			rescalemethod=rescalemethod, ressize=ressize, orient=orient, xy_width=xy_width )
-	#ENDIF
-#ENDDEF
-
-#DEF
-def predictClasses_old( refImg, otherImg, num_classes, allmodels, roi_indices, out=None, probs=False, \
-			rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320 ):
-
-	### Import more modules
-	import time as _time
-	import nibabel as _nib
-	import nibabel.processing as _nibp
-	from scipy.ndimage.interpolation import zoom as _zoom
-	import csv as _csv
-	
-	st = _time.time()
-	
 	im_dat = extractDataForSubject( \
 			otherImg=otherImg, \
 			refImg=refImg, \
@@ -311,94 +304,18 @@ def predictClasses_old( refImg, otherImg, num_classes, allmodels, roi_indices, o
 			orient=orient, \
 			xy_width=xy_width, \
 			rescalemethod=rescalemethod )
-	
-	### Create array to store output probabilities
-	val_prob = _np.zeros( ( im_dat.shape[0:3] + (num_classes,len(allmodels)) ) )
 
-	# Launch testing
-	
-	# FOR EACH SLICE	
-	for i in range( im_dat.shape[0] ):
-		# FOR EACH MODEL
-		for c in range( len(allmodels) ):
-			val_prob[i,:,:,:,c] = allmodels[c].run( im_dat[i].reshape( (1,)+im_dat[i].shape ) )
-		# ENDFOR EACH MODEL
-	# ENDFOR EACH SLICE
+	ens = runModel( im_dat, num_classes, allmodels, batch_size, nJobs )
 
-
-	### Reshuffle predictions from [z,x,y,c,m] -> [x,y,z,c,m]
-	val_prob = _np.moveaxis( val_prob,0,2 )
-	ens = val_prob.mean( axis=-1 )
-
-	del val_prob, im_dat
-
-	### Generate predictions for the test subject
-	#IF
 	if out:
-		### Read reference image
-		inImg = _nib.load( refImg )
-		
-		### Resample refImg
-		inImg_res,inImg_res_F = loadrespadsave( in_path=refImg, \
-						xy_width=xy_width, \
-						ressize=ressize, \
-						orient=orient, \
-						mask=0, \
-						rescalemethod=rescalemethod, \
-						out_path=None )
+		saveOutput( ens, refImg, num_classes, roi_indices, out=out, probs=probs, \
+			rescalemethod=rescalemethod, ressize=ressize, orient=orient, xy_width=xy_width, nJobs=nJobs )
+	else:
+		return saveOutput( ens, refImg, num_classes, roi_indices, out=out, probs=probs, \
+			rescalemethod=rescalemethod, ressize=ressize, orient=orient, xy_width=xy_width, nJobs=nJobs )
+#ENDDEF
 
-		### Prepare inImg as a 4-dim image
-		inImg_4d = _nib.Nifti1Image( _np.zeros( (inImg.shape+(num_classes,)),dtype=_np.int8 ), inImg.affine, inImg.header )
-		inImg_4d.header.set_zooms( (inImg.header.get_zooms() + (1.0,) ) )
-
-		### Prepare ens as a Nifti1Image
-		ens_f = _nib.Nifti1Image( ens, inImg_res_F.affine, inImg_res_F.header )
-		ens_f.header.set_zooms( (inImg_res_F.header.get_zooms() + (1.0,) ) )
-
-		### Re-orient, resample and resize ens_f to the refImg space
-		ens_f_ref = _nibp.resample_from_to( ens_f, inImg_4d )
-		del inImg_4d, ens_f
-		
-		### Get ens in refImg space
-		ens_ref = ens_f_ref.get_data()
-		ens_pred = _np.argmax( ens_ref,axis=-1 )
-		ens_pred_enc = _np.zeros_like( ens_pred )
-
-		# encode indices to rois if provided
-		for i in range( len(roi_indices) ):
-		
-			ind,roi = roi_indices[i]
-			ens_pred_enc = _np.where( ens_pred==int(ind), int(roi), ens_pred_enc )
-		#ENDFOR
-
-		# clear memory
-		del ens_pred
-
-
-		### Get outImg from probabilities
-		outImgDat_img = _nib.Nifti1Image( ens_pred_enc, inImg.affine, inImg.header )
-		outImgDat_img.set_data_dtype( 'uint8' )
-		outImgDat_img.to_filename( out )
-
-		### If probabilities need to be saved
-		#IF
-		if probs:
-			#FOR
-			for i in range( len(roi_indices) ):
-				
-				ind,roi = roi_indices[i]
-				
-				outImgDat = ens_ref[:,:,:,ind].copy()
-				outImgDat = _np.where( outImgDat<0.01, 0, outImgDat )
-		
-				outImgDat_img = _nib.Nifti1Image( outImgDat, inImg.affine, inImg.header )
-				outImgDat_img.set_data_dtype( 'float32' )
-				outImgDat_img.to_filename( _os.path.join( out[:-7] + '_probabilities_' + str(roi) + '.nii.gz' ) )
-			#ENDFOR
-		#ENDIF
-	#ENDIF
 	
-#ENDDEF		
 
 
 	
@@ -493,6 +410,7 @@ def _main():
 	print("XY width \t: %d" % (FLAGS.xy_width))
 	print("Voxel Size \t: %f" % (FLAGS.ressize))
 	print("Orientation \t: %s" % (FLAGS.reorient))
+	print("Batch Size \t: %s" % (FLAGS.batch))
 	
 	print("\nOutput probs \t: %d" % (FLAGS.probs))
 	
@@ -500,124 +418,161 @@ def _main():
 	import csv as _csv
 	from concurrent.futures import ThreadPoolExecutor as _TPE
 
-	### Load all models
-	print("\n---->	Loading all stored models in ", FLAGS.mdlDir)
-	_sys.stdout.flush()
+	#####################################
+	#### CREATE DISTRIBUTE STRATEGY #####
+	#####################################
+	print("\n")
+	print("Defining distribution strategy...")
+
+	# Check if CUDA_VISIBLE_DEVICES is set
+	#TRY
+	try:
+		_os.environ["CUDA_VISIBLE_DEVICES"]
+		device_name = _os.environ["CUDA_VISIBLE_DEVICES"]
+	except:
+		device_name = 0
+	#ENDTRY
+	print( "CUDA_VISIBLE_DEVICES: %s" % (device_name) )
 	
-	allmodels = []
-	allcheckpoints = []
 	
-	# FOR ALL MODEL DIRS
-	for mDir in FLAGS.mdlDir:
-		# FOR ALL CHECKPOINTS
-		for checkpoint in _os.listdir( mDir ):
-			cppath = _os.path.join( mDir + '/' + checkpoint )
-			allcheckpoints.extend( [cppath] )
-		# ENDFOR ALL CHECKPOINTS
-	# ENDFOR ALL MODEL DIRS
+	# If the list of devices is not specified in the
+	# `tf.distribute.MirroredStrategy` constructor, it will be auto-detected.
+	strategy = _tf.distribute.MirroredStrategy()
+	print( "\nSTRATEGY: %s" % (strategy) )
 	
-	# Launch threads to load models simultaneously
-	print("")
-	#WITH
-	with _TPE( max_workers=len(allcheckpoints) ) as executor:
-		#FOR
-		for c in allcheckpoints:
-			print( "\t\t-->	Loading ", _os.path.basename(c) )
-			executor.submit( loadModel,allmodels,c )
-		#ENDFOR
-	#ENDWITH
-	print("")	
-	_sys.stdout.flush()
 	
-	### Encode indices to ROIs if provided
-	roi_indices = []
-	#IF
-	if FLAGS.roi:
+	NUM_GPU_DEVICES = strategy.num_replicas_in_sync
+	print ( 'NUM_GPU_DEVICES: {}'.format(NUM_GPU_DEVICES) )
+	gpus = _tf.config.experimental.list_physical_devices('GPU')
+	print( gpus )
+
+	BATCH_SIZE_PER_REPLICA = FLAGS.batch
+	GLOBAL_BATCH_SIZE = BATCH_SIZE_PER_REPLICA * NUM_GPU_DEVICES
+	print("BATCH_SIZE_PER_REPLICA: %d" % (BATCH_SIZE_PER_REPLICA) )
+	print("GLOBAL_BATCH_SIZE: %d" % (GLOBAL_BATCH_SIZE) )
+
+	# WITH STRATEGY
+	with strategy.scope():
+
+		##########################
+		#### LOAD ALL MODELS #####
+		##########################
+		print("\n")
+		print("\n---->	Loading all stored models in ", FLAGS.mdlDir)
+		_sys.stdout.flush()
+		
+		allmodels = []
+		# Launch threads to load models simultaneously
+		print("")
 		#WITH
-		with open(FLAGS.roi) as roicsvfile:
-			roi_reader = _csv.DictReader( roicsvfile )
-
-			#FOR
-			for roi_row in roi_reader:
-				roi_indices.extend( [ [int(roi_row['Index']), int(roi_row['ROI'])] ] )
-			#ENDFOR
+		with _TPE( max_workers=None ) as executor:
+			# FOR ALL MODEL DIRS
+			for mDir in FLAGS.mdlDir:
+				# FOR ALL CHECKPOINTS
+				for checkpoint in _os.listdir( mDir ):
+					cppath = _os.path.join( mDir + '/' + checkpoint )
+					print( "\t\t-->	Loading ", _os.path.basename(cppath) )
+					executor.submit( loadModel,allmodels,cppath )
+				# ENDFOR ALL CHECKPOINTS
+			# ENDFOR ALL MODEL DIRS
 		#ENDWITH
-	else:
-		for i in range( FLAGS.num_classes ):
-			roi_indices.extend( [ [i,i] ] )
-	#ENDIF
-	
+		print("")	
+		_sys.stdout.flush()
+		
+		### Encode indices to ROIs if provided
+		roi_indices = []
+		#IF
+		if FLAGS.roi:
+			#WITH
+			with open(FLAGS.roi) as roicsvfile:
+				roi_reader = _csv.DictReader( roicsvfile )
 
-	### Predict
-	print("\n----> Running predictions for all subjects in the FileList")
-	_sys.stdout.flush()
+				#FOR
+				for roi_row in roi_reader:
+					roi_indices.extend( [ [int(roi_row['Index']), int(roi_row['ROI'])] ] )
+				#ENDFOR
+			#ENDWITH
+		else:
+			for i in range( FLAGS.num_classes ):
+				roi_indices.extend( [ [i,i] ] )
+		#ENDIF
+		
 
-	#WITH
-	with _TPE( max_workers=nJobs ) as executor:
-	
-		#WITH
-		with open(FLAGS.sList) as f:
-			reader = _csv.DictReader( f )
+		### Predict
+		print("\n----> Running predictions for all subjects in the FileList")
+		_sys.stdout.flush()
 
-			#FOR
-			for row in reader:
+		#WITH TPE
+		with _TPE( max_workers=nJobs ) as executor:
+		
+			#WITH OPENFILE
+			with open(FLAGS.sList) as f:
+				reader = _csv.DictReader( f )
 
-				### Get image filenames
-				refImg = row[FLAGS.refMod]
-				outImg = row[FLAGS.outCol]
+				#FOR
+				for row in reader:
 
-				# Get files for other modalities
-				otherModsFileList = []
-				#IF
-				if otherMods:
-					#FOR
-					for mod in otherMods:
-						otherModsFileList.extend( [ row[mod] ] )
-					#ENDFOR
-				#ENDIF
-			
-				### Create output directory if it doesn't exist already
-				#IF
-				if not _os.path.isdir( _os.path.dirname(outImg) ):
-					_os.makedirs( _os.path.dirname(outImg) )
-				#ENDIF
+					### Get image filenames
+					refImg = row[FLAGS.refMod]
+					outImg = row[FLAGS.outCol]
 
-				### Check if the file exists already
-				#IF
-				if not _os.path.isfile( outImg ):
-					print( "\t---->	%s" % ( row[FLAGS.idCol] ) )
-					_sys.stdout.flush()
-			
-					executor.submit( predictClasses, \
-							refImg=refImg, \
-							otherImg=otherModsFileList, \
-							num_classes=FLAGS.num_classes, \
-							allmodels=allmodels, \
-							roi_indices=roi_indices, \
-							out=outImg, \
-							probs=FLAGS.probs, \
-							rescalemethod=FLAGS.rescale, \
-							ressize=FLAGS.ressize, \
-							orient=FLAGS.reorient, \
-							xy_width=FLAGS.xy_width )
-#					predictClasses( \
-#							refImg=refImg, \
-#							otherImg=otherModsFileList, \
-#							num_classes=FLAGS.num_classes, \
-#							allmodels=allmodels, \
-#							roi_indices=roi_indices, \
-#							out=outImg, \
-#							probs=FLAGS.probs, \
-#							rescalemethod=FLAGS.rescale, \
-#							ressize=FLAGS.ressize, \
-#							orient=FLAGS.reorient, \
-#							xy_width=FLAGS.xy_width )
-						
-					_time.sleep( FLAGS.delay )
-				#ENDIF
-			#ENDFOR
-		#ENDWITH
-	#ENDWITH
+					# Get files for other modalities
+					otherModsFileList = []
+					#IF
+					if otherMods:
+						#FOR
+						for mod in otherMods:
+							otherModsFileList.extend( [ row[mod] ] )
+						#ENDFOR
+					#ENDIF
+				
+					### Create output directory if it doesn't exist already
+					#IF
+					if not _os.path.isdir( _os.path.dirname(outImg) ):
+						_os.makedirs( _os.path.dirname(outImg) )
+					#ENDIF
+
+					### Check if the file exists already
+					#IF
+					if not _os.path.isfile( outImg ):
+						print( "\t---->	%s" % ( row[FLAGS.idCol] ) )
+						_sys.stdout.flush()
+				
+	#					executor.submit( predictClasses, \
+	#							refImg=refImg, \
+	#							otherImg=otherModsFileList, \
+	#							num_classes=FLAGS.num_classes, \
+	#							allmodels=allmodels, \
+	#							roi_indices=roi_indices, \
+	#							out=outImg, \
+	#							probs=FLAGS.probs, \
+	#							rescalemethod=FLAGS.rescale, \
+	#							ressize=FLAGS.ressize, \
+	#							orient=FLAGS.reorient, \
+	#							xy_width=FLAGS.xy_width, \
+	#							batch_size=GLOBAL_BATCH_SIZE, \
+	#							nJobs=nJobs )
+						predictClasses( \
+								refImg=refImg, \
+								otherImg=otherModsFileList, \
+								num_classes=FLAGS.num_classes, \
+								allmodels=allmodels, \
+								roi_indices=roi_indices, \
+								out=outImg, \
+								probs=FLAGS.probs, \
+								rescalemethod=FLAGS.rescale, \
+								ressize=FLAGS.ressize, \
+								orient=FLAGS.reorient, \
+								xy_width=FLAGS.xy_width, \
+								batch_size=GLOBAL_BATCH_SIZE, \
+								nJobs=nJobs )
+							
+						_time.sleep( FLAGS.delay )
+					#ENDIF
+				#ENDFOR
+			#ENDWITH OPENFILE
+		#ENDWITH TPE
+	#ENDWITH STRATEGY											
 
 	### Print resouce usage
 	print("\nResource usage for this process")
