@@ -21,7 +21,7 @@ from .data_io import loadrespadsave
 
 #DEF ARGPARSER
 def read_flags():
-	"""Returns flags"""
+	"""Parses args and returns the flags and parser."""
 	### Import modules
 	import argparse as _argparse
 
@@ -105,7 +105,11 @@ def read_flags():
 ### Define signal trap function
 #DEF
 def signal_handler(signal, frame):
-	
+	"""Signal handler to catch keyboard interrupt signals.
+	Args:
+		signal
+		frame
+	"""
 	print('Program interrupt signal received! Aborting operations ...')
 	_sys.exit(0)
 #ENDDEF
@@ -118,15 +122,19 @@ class LoadModel():
 	# DEF
 	def __init__( self, checkpoint ):
 		"""
+		LoadModel class constructor to load models from checkpoints.
 		Args:
-			checkpoint: checkpoint to load
+			checkpoint: path to checkpoint
 		"""
 		self.model = _tf.keras.models.load_model(checkpoint)
 	# ENDDEF
 		
 	# DEF
 	def run( self, im_slice ):
-		""" Running the activation operation previously imported """
+		""" Running the activation operation previously imported.
+		Args:
+			im_slice: image slice of shape (b,x,y,m)
+		"""
 		# predict
 		_,prob,_,_,_,_ = self.model.predict( im_slice )
 		return prob
