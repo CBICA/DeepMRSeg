@@ -30,7 +30,7 @@ from . import utils
 
 #DEF ARGPARSER
 def read_flags():
-	"""Returns flags"""
+	"""Parses args and returns the flags and parser."""
 	### Import modules
 	import argparse as _argparse
 
@@ -150,7 +150,11 @@ def read_flags():
 ### Define signal trap function
 #DEF
 def signal_handler(signal, frame):
-	
+	"""Signal handler to catch keyboard interrupt signals.
+	Args:
+		signal
+		frame
+	"""
 	print('Program interrupt signal received! Aborting operations ...')
 	_sys.exit(0)
 #ENDDEF
@@ -160,11 +164,26 @@ def signal_handler(signal, frame):
 #CLASS TRAIN
 class Train(object):
 
-	"""Train class."""
+	"""A class to train a DeepMRSeg model.
+	...
+	Attributes:
+		model: path
+			DeepMRSeg model
+		strategy: tf.distribute.Strategy() object
+			Distribution strategy in use.
+		optimizer: tf.keras.optimizers object
+			Optimizer to use.
+		num_gpu: int
+			Number of GPUs available.
+		FLAGS: Other args
+	
+	Methods:
+		
+	"""
 
 	#DEF INIT
 	def __init__( self, model, strategy, optimizer, num_gpu, FLAGS ):
-		"""Train class.
+		"""Train class constructor to initialize Train object.
 		Args:
 		  model: DeepMRSeg model.
 		  strategy: Distribution strategy in use.
@@ -214,7 +233,7 @@ class Train(object):
 
 	# DEF SET_LR
 	def set_lr( self,e,plat ):
-
+		"""Learning rate scheduler."""
 		if not hasattr( self.optimizer, "lr" ):
 			raise ValueError('Optimizer must have a "lr" attribute.')
 			
@@ -243,7 +262,7 @@ class Train(object):
 	def compute_loss( self,one_h,probs_d1,probs_d2,probs_d4 ):
 
 		total_loss, total_loss_d1, \
-		iou_d1, mae_d1, bce_d1 = losses.getCombinedLoss( one_h,probs_d1,probs_d2,probs_d4,\
+		iou_d1, mae_d1, bce_d1 = losses.get_combo_loss( one_h,probs_d1,probs_d2,probs_d4,\
 								self.gamma,self.deep_supervision,\
 								self.xy_width,self.alpha )
 		
@@ -295,7 +314,7 @@ class Train(object):
 		preds_d1,probs_d1,_,_,_,_ = self.model( img, training=False )
 		
 		# Calculate losses
-		total_loss_d1, iou_d1, mae_d1, bce_d1 = losses.CombinedLoss( oh_d1,probs_d1,1,50 )
+		total_loss_d1, iou_d1, mae_d1, bce_d1 = losses.combo_loss( oh_d1,probs_d1,1,50 )
 		
 		self.iou_val.update_state( lab,preds_d1 )
 
