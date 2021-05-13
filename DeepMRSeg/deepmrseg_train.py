@@ -766,17 +766,6 @@ def _main():
 	print("\n")
 	print("Defining distribution strategy...")
 
-	# Check if CUDA_VISIBLE_DEVICES is set
-	#TRY
-	try:
-		_os.environ["CUDA_VISIBLE_DEVICES"]
-		device_name = _os.environ["CUDA_VISIBLE_DEVICES"]
-	except:
-		device_name = 0
-	#ENDTRY
-	print( "CUDA_VISIBLE_DEVICES: %s" % (device_name) )
-	
-	
 	# If the list of devices is not specified in the
 	# `tf.distribute.MirroredStrategy` constructor, it will be auto-detected.
 	strategy = _tf.distribute.MirroredStrategy()
