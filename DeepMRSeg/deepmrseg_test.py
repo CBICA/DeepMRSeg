@@ -418,12 +418,6 @@ def _main():
 	import csv as _csv
 	from concurrent.futures import ThreadPoolExecutor as _TPE
 
-	#####################################
-	#### CREATE DISTRIBUTE STRATEGY #####
-	#####################################
-	print("\n")
-	print("Defining distribution strategy...")
-
 	# Check if CUDA_VISIBLE_DEVICES is set
 	#TRY
 	try:
@@ -435,144 +429,124 @@ def _main():
 	print( "CUDA_VISIBLE_DEVICES: %s" % (device_name) )
 	
 	
-	# If the list of devices is not specified in the
-	# `tf.distribute.MirroredStrategy` constructor, it will be auto-detected.
-	strategy = _tf.distribute.MirroredStrategy()
-	print( "\nSTRATEGY: %s" % (strategy) )
+	##########################
+	#### LOAD ALL MODELS #####
+	##########################
+	print("\n")
+	print("\n---->	Loading all stored models in ", FLAGS.mdlDir)
+	_sys.stdout.flush()
 	
+	allmodels = []
+	# Launch threads to load models simultaneously
+	print("")
+	#WITH
+	with _TPE( max_workers=None ) as executor:
+		# FOR ALL MODEL DIRS
+		for mDir in FLAGS.mdlDir:
+			# FOR ALL CHECKPOINTS
+			for checkpoint in _os.listdir( mDir ):
+				cppath = _os.path.join( mDir + '/' + checkpoint )
+				print( "\t\t-->	Loading ", _os.path.basename(cppath) )
+				executor.submit( loadModel,allmodels,cppath )
+			# ENDFOR ALL CHECKPOINTS
+		# ENDFOR ALL MODEL DIRS
+	#ENDWITH
+	print("")	
+	_sys.stdout.flush()
 	
-	NUM_GPU_DEVICES = strategy.num_replicas_in_sync
-	print ( 'NUM_GPU_DEVICES: {}'.format(NUM_GPU_DEVICES) )
-	gpus = _tf.config.experimental.list_physical_devices('GPU')
-	print( gpus )
-
-	BATCH_SIZE_PER_REPLICA = FLAGS.batch
-	GLOBAL_BATCH_SIZE = BATCH_SIZE_PER_REPLICA * NUM_GPU_DEVICES
-	print("BATCH_SIZE_PER_REPLICA: %d" % (BATCH_SIZE_PER_REPLICA) )
-	print("GLOBAL_BATCH_SIZE: %d" % (GLOBAL_BATCH_SIZE) )
-
-	# WITH STRATEGY
-	with strategy.scope():
-
-		##########################
-		#### LOAD ALL MODELS #####
-		##########################
-		print("\n")
-		print("\n---->	Loading all stored models in ", FLAGS.mdlDir)
-		_sys.stdout.flush()
-		
-		allmodels = []
-		# Launch threads to load models simultaneously
-		print("")
+	### Encode indices to ROIs if provided
+	roi_indices = []
+	#IF
+	if FLAGS.roi:
 		#WITH
-		with _TPE( max_workers=None ) as executor:
-			# FOR ALL MODEL DIRS
-			for mDir in FLAGS.mdlDir:
-				# FOR ALL CHECKPOINTS
-				for checkpoint in _os.listdir( mDir ):
-					cppath = _os.path.join( mDir + '/' + checkpoint )
-					print( "\t\t-->	Loading ", _os.path.basename(cppath) )
-					executor.submit( loadModel,allmodels,cppath )
-				# ENDFOR ALL CHECKPOINTS
-			# ENDFOR ALL MODEL DIRS
+		with open(FLAGS.roi) as roicsvfile:
+			roi_reader = _csv.DictReader( roicsvfile )
+
+			#FOR
+			for roi_row in roi_reader:
+				roi_indices.extend( [ [int(roi_row['Index']), int(roi_row['ROI'])] ] )
+			#ENDFOR
 		#ENDWITH
-		print("")	
-		_sys.stdout.flush()
-		
-		### Encode indices to ROIs if provided
-		roi_indices = []
-		#IF
-		if FLAGS.roi:
-			#WITH
-			with open(FLAGS.roi) as roicsvfile:
-				roi_reader = _csv.DictReader( roicsvfile )
+	else:
+		for i in range( FLAGS.num_classes ):
+			roi_indices.extend( [ [i,i] ] )
+	#ENDIF
+	
 
-				#FOR
-				for roi_row in roi_reader:
-					roi_indices.extend( [ [int(roi_row['Index']), int(roi_row['ROI'])] ] )
-				#ENDFOR
-			#ENDWITH
-		else:
-			for i in range( FLAGS.num_classes ):
-				roi_indices.extend( [ [i,i] ] )
-		#ENDIF
-		
+	### Predict
+	print("\n----> Running predictions for all subjects in the FileList")
+	_sys.stdout.flush()
 
-		### Predict
-		print("\n----> Running predictions for all subjects in the FileList")
-		_sys.stdout.flush()
+	#WITH TPE
+	with _TPE( max_workers=nJobs ) as executor:
+	
+		#WITH OPENFILE
+		with open(FLAGS.sList) as f:
+			reader = _csv.DictReader( f )
 
-		#WITH TPE
-		with _TPE( max_workers=nJobs ) as executor:
-		
-			#WITH OPENFILE
-			with open(FLAGS.sList) as f:
-				reader = _csv.DictReader( f )
+			#FOR
+			for row in reader:
 
-				#FOR
-				for row in reader:
+				### Get image filenames
+				refImg = row[FLAGS.refMod]
+				outImg = row[FLAGS.outCol]
 
-					### Get image filenames
-					refImg = row[FLAGS.refMod]
-					outImg = row[FLAGS.outCol]
+				# Get files for other modalities
+				otherModsFileList = []
+				#IF
+				if otherMods:
+					#FOR
+					for mod in otherMods:
+						otherModsFileList.extend( [ row[mod] ] )
+					#ENDFOR
+				#ENDIF
+			
+				### Create output directory if it doesn't exist already
+				#IF
+				if not _os.path.isdir( _os.path.dirname(outImg) ):
+					_os.makedirs( _os.path.dirname(outImg) )
+				#ENDIF
 
-					# Get files for other modalities
-					otherModsFileList = []
-					#IF
-					if otherMods:
-						#FOR
-						for mod in otherMods:
-							otherModsFileList.extend( [ row[mod] ] )
-						#ENDFOR
-					#ENDIF
-				
-					### Create output directory if it doesn't exist already
-					#IF
-					if not _os.path.isdir( _os.path.dirname(outImg) ):
-						_os.makedirs( _os.path.dirname(outImg) )
-					#ENDIF
-
-					### Check if the file exists already
-					#IF
-					if not _os.path.isfile( outImg ):
-						print( "\t---->	%s" % ( row[FLAGS.idCol] ) )
-						_sys.stdout.flush()
-				
-	#					executor.submit( predictClasses, \
-	#							refImg=refImg, \
-	#							otherImg=otherModsFileList, \
-	#							num_classes=FLAGS.num_classes, \
-	#							allmodels=allmodels, \
-	#							roi_indices=roi_indices, \
-	#							out=outImg, \
-	#							probs=FLAGS.probs, \
-	#							rescalemethod=FLAGS.rescale, \
-	#							ressize=FLAGS.ressize, \
-	#							orient=FLAGS.reorient, \
-	#							xy_width=FLAGS.xy_width, \
-	#							batch_size=GLOBAL_BATCH_SIZE, \
-	#							nJobs=nJobs )
-						predictClasses( \
-								refImg=refImg, \
-								otherImg=otherModsFileList, \
-								num_classes=FLAGS.num_classes, \
-								allmodels=allmodels, \
-								roi_indices=roi_indices, \
-								out=outImg, \
-								probs=FLAGS.probs, \
-								rescalemethod=FLAGS.rescale, \
-								ressize=FLAGS.ressize, \
-								orient=FLAGS.reorient, \
-								xy_width=FLAGS.xy_width, \
-								batch_size=GLOBAL_BATCH_SIZE, \
-								nJobs=nJobs )
-							
-						_time.sleep( FLAGS.delay )
-					#ENDIF
-				#ENDFOR
-			#ENDWITH OPENFILE
-		#ENDWITH TPE
-	#ENDWITH STRATEGY											
+				### Check if the file exists already
+				#IF
+				if not _os.path.isfile( outImg ):
+					print( "\t---->	%s" % ( row[FLAGS.idCol] ) )
+					_sys.stdout.flush()
+			
+#					executor.submit( predictClasses, \
+#							refImg=refImg, \
+#							otherImg=otherModsFileList, \
+#							num_classes=FLAGS.num_classes, \
+#							allmodels=allmodels, \
+#							roi_indices=roi_indices, \
+#							out=outImg, \
+#							probs=FLAGS.probs, \
+#							rescalemethod=FLAGS.rescale, \
+#							ressize=FLAGS.ressize, \
+#							orient=FLAGS.reorient, \
+#							xy_width=FLAGS.xy_width, \
+#							batch_size=FLAGS.batch, \
+#							nJobs=nJobs )
+					predictClasses( \
+							refImg=refImg, \
+							otherImg=otherModsFileList, \
+							num_classes=FLAGS.num_classes, \
+							allmodels=allmodels, \
+							roi_indices=roi_indices, \
+							out=outImg, \
+							probs=FLAGS.probs, \
+							rescalemethod=FLAGS.rescale, \
+							ressize=FLAGS.ressize, \
+							orient=FLAGS.reorient, \
+							xy_width=FLAGS.xy_width, \
+							batch_size=FLAGS.batch, \
+							nJobs=nJobs )
+						
+					_time.sleep( FLAGS.delay )
+				#ENDIF
+			#ENDFOR
+		#ENDWITH OPENFILE
+	#ENDWITH TPE
 
 	### Print resouce usage
 	print("\nResource usage for this process")
