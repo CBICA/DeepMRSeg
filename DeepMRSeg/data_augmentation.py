@@ -3,7 +3,6 @@
 __author__ 	= 'Jimit Doshi'
 __EXEC_NAME__ 	= "data_augmentation"
 
-import os as _os
 import tensorflow as _tf
 import tensorflow_addons as _tfa
 import numpy as _np

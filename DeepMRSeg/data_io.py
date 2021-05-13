@@ -4,7 +4,6 @@ __author__ 	= 'Jimit Doshi'
 __EXEC_NAME__ 	= "data_io"
 
 import os as _os
-import sys as _sys
 import numpy as _np
 
 from . import rescaleimages
@@ -61,10 +60,16 @@ def loadrespadsave( in_path,xy_width,ressize,orient='LPS',mask=0,rescalemethod='
 	### Import modules
 	import nibabel as _nib
 	import nibabel.processing as _nibp
-	from scipy.ndimage.interpolation import zoom as _zoom
 	
-	### Load image
-	FileRead = _nib.load( in_path )
+	### Load image if it is a file path
+	#IF
+	if _os.path.isfile(in_path):
+		FileRead = _nib.load( in_path )
+	### Else, verify if it is a nibabel object with a header
+	else:
+		assert in_path.header
+		FileRead = in_path
+	#ENDIF
     
 	### Re-orient, resample and resize the image
 	#IF
@@ -125,6 +130,7 @@ def extractDataForSubject( otherImg=None, refImg=None, labImg=None, \
 		others[m] = others[m].reshape( ( others[m].shape+(1,) ) )
 
 	### Return appended T1 and FL and the wml
+	#IF
 	if len(otherImg) > 0:
 		allMods = ref.copy()
 		for m in range( len(otherImg) ):
@@ -133,7 +139,7 @@ def extractDataForSubject( otherImg=None, refImg=None, labImg=None, \
 		return allMods, lab
 	else:
 		return ref, lab
-	
+	#ENDIF
 #ENDDEF
 
 #DEF
