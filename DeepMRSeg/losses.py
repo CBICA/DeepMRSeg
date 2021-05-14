@@ -1,8 +1,7 @@
-
 """
 This module contains various loss functions and helper functions
- 
-Functions: 
+
+Functions:
 	get_tp_fp_fn( y_true,y_pred )
 	get_iou( y_true,y_pred )
 	get_dice( y_true,y_pred )
@@ -34,6 +33,7 @@ EPS = _tf.constant( 1e-7 )
 #@_tf.function
 def get_tp_fp_fn( y_true,y_pred ):
 	"""For a given pair of y_true and y_pred, calculate TP, FP and FN.
+
 	Args:
 		y_true: ground truth one_hot encodings of shape (b,x,y,c)
 		y_pred: predicted probabilities of shape (b,x,y,c)
@@ -54,6 +54,7 @@ def get_tp_fp_fn( y_true,y_pred ):
 #@_tf.function
 def get_iou( y_true,y_pred ):
 	"""For a given pair of y_true and y_pred, calculate IOU.
+
 	Args:
 		y_true: ground truth one_hot encodings of shape (b,x,y,c)
 		y_pred: predicted probabilities of shape (b,x,y,c)
@@ -73,6 +74,7 @@ def get_iou( y_true,y_pred ):
 #@_tf.function
 def get_dice( y_true,y_pred ):
 	"""For a given pair of y_true and y_pred, calculate Dice overlap.
+
 	Args:
 		y_true: ground truth one_hot encodings of shape (b,x,y,c)
 		y_pred: predicted probabilities of shape (b,x,y,c)
@@ -92,6 +94,7 @@ def get_dice( y_true,y_pred ):
 #@_tf.function
 def soft_iou_loss( y_true, y_pred ):
 	"""For a given pair of y_true and y_pred, calculate IOU loss.
+
 	Args:
 		y_true: ground truth one_hot encodings of shape (b,x,y,c)
 		y_pred: predicted probabilities of shape (b,x,y,c)
@@ -106,6 +109,7 @@ def soft_iou_loss( y_true, y_pred ):
 #@_tf.function
 def soft_dice_loss( y_true, y_pred ):
 	"""For a given pair of y_true and y_pred, calculate Dice loss.
+
 	Args:
 		y_true: ground truth one_hot encodings of shape (b,x,y,c)
 		y_pred: predicted probabilities of shape (b,x,y,c)
@@ -120,6 +124,7 @@ def soft_dice_loss( y_true, y_pred ):
 #@_tf.function
 def focal_iou_loss( y_true, y_pred, gamma=1 ):
 	"""For a given pair of y_true and y_pred, calculate focal IOU loss.
+
 	Args:
 		y_true: ground truth one_hot encodings of shape (b,x,y,c)
 		y_pred: predicted probabilities of shape (b,x,y,c)
@@ -136,6 +141,7 @@ def focal_iou_loss( y_true, y_pred, gamma=1 ):
 #@_tf.function
 def focal_dice_loss( y_true, y_pred, gamma=1 ):
 	"""For a given pair of y_true and y_pred, calculate focal IOU loss.
+
 	Args:
 		y_true: ground truth one_hot encodings of shape (b,x,y,c)
 		y_pred: predicted probabilities of shape (b,x,y,c)
@@ -152,6 +158,7 @@ def focal_dice_loss( y_true, y_pred, gamma=1 ):
 #@_tf.function
 def mae_loss( y_true, y_pred, gamma=1 ):
 	"""For a given pair of y_true and y_pred, calculate Mean Absolute Error.
+
 	Args:
 		y_true: ground truth one_hot encodings of shape (b,x,y,c)
 		y_pred: predicted probabilities of shape (b,x,y,c)
@@ -167,6 +174,7 @@ def mae_loss( y_true, y_pred, gamma=1 ):
 #@_tf.function
 def cce_loss( y_true, y_pred, gamma=1 ):
 	"""For a given pair of y_true and y_pred, calculate Categorical Cross Entropy.
+
 	Args:
 		y_true: ground truth one_hot encodings of shape (b,x,y,c)
 		y_pred: predicted probabilities of shape (b,x,y,c)
@@ -185,6 +193,7 @@ def cce_loss( y_true, y_pred, gamma=1 ):
 #@_tf.function
 def combo_loss( y_true,y_pred,gamma=1,alpha=50 ):
 	"""For a given pair of y_true and y_pred, calculate Combo Loss.
+
 	Args:
 		y_true: ground truth one_hot encodings of shape (b,x,y,c)
 		y_pred: predicted probabilities of shape (b,x,y,c)
@@ -209,6 +218,7 @@ def combo_loss( y_true,y_pred,gamma=1,alpha=50 ):
 #@_tf.function
 def get_combo_loss( oh_d1,probs_d1,probs_d2,probs_d4,gamma=1,ds=False,xy=256,alpha=50 ):
 	"""For the input one_hot encodings and predicted probabilities at the 3 levels, return total losses.
+
 	Args:
 		oh_d1: ground truth one_hot encodings of shape (b,x,y,c)
 		probs_d1: predicted probabilities of shape (b,x,y,c)
