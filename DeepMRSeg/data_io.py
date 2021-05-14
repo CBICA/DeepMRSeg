@@ -8,6 +8,7 @@ import numpy as _np
 
 from . import rescaleimages
 from . import pythonUtilities
+from . import tfrecordutils
 
 ################################################ FUNCTIONS ################################################
 
@@ -149,7 +150,6 @@ def extractPkl( subListFile, idcolumn, labCol, refMod, otherMods, num_modalities
 
 	### Import modules
 	import csv as _csv
-	import tfrecordutils
 	
 	### Extract data for training
 	#WITH
