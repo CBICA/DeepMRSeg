@@ -99,7 +99,6 @@ def unet_vanilla( inp_layer,ksize=3,depth=None,filters=32,layers=None,num_classe
 	#####################
 
 	return y_conv, y_conv_d2, y_conv_d4
-    
 # ENDDEF UNET
 
 

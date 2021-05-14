@@ -11,13 +11,13 @@ import tensorflow as _tf
 def _int64_feature(value):
 	return _tf.train.Feature(int64_list=_tf.train.Int64List(value=[value]))
 #ENDDEF
-	
+
 #DEF
 def _bytes_feature(value):
 	return _tf.train.Feature(bytes_list=_tf.train.BytesList(value=[value]))
 #ENDDEF
 
-#DEF					
+#DEF			
 def tfrecordwriter( rname, rfeats, rlabels, feats_dtype, labels_dtype ):
 
 	# open the TFRecords file

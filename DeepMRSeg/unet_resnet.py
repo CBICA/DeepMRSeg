@@ -49,7 +49,7 @@ def unet_resnet( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 	print("\n")
 
 	### Add Residual layers
-	for l in range(0,layers):
+	for _ in range(0,layers):
 		conv = ResUnit_v1( conv, filters=filters, ksize=ksize, norm=norm )
 		print(conv)
 
@@ -89,7 +89,7 @@ def unet_resnet( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 			print(conv)
 
 		### Add Residual layers
-		for l in range(0,layers):
+		for _ in range(0,layers):
 			conv = ResUnit_v1( conv, filters=fm[-1], ksize=ksize, norm=norm )
 			print(conv)
 
@@ -128,7 +128,7 @@ def unet_resnet( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 		print(conv)
 		
 		### Add Residual layers
-		for l in range(0,layers):
+		for _ in range(0,layers):
 			conv = ResUnit_v1( conv, filters=fm[i]*2, ksize=ksize, norm=norm )
 			print(conv)
 
@@ -158,7 +158,7 @@ def unet_resnet( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 	print(conv)
 		
 	### Add Residual layers
-	for l in range(0,layers):
+	for _ in range(0,layers):
 		conv = ResUnit_v1( conv, filters=conv.shape.as_list()[-1], ksize=ksize, norm=norm )
 		print(conv)
 
@@ -176,5 +176,4 @@ def unet_resnet( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 	#####################
 
 	return y_conv, y_conv_d2, y_conv_d4
-	
 # ENDDEF UNET

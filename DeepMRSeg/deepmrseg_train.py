@@ -63,7 +63,7 @@ def read_flags():
 				help="absolute path to the directory where model checkpoint is stored" )
 	dirArgs.add_argument( "--tmpDir", default=None, type=str, \
 				help="absolute path to the temporary directory" )
-	
+
 #	INPUT IMAGE
 #	===========
 	inpArgs = parser.add_argument_group( 'INPUT IMAGE' )
@@ -151,6 +151,7 @@ def read_flags():
 #DEF
 def signal_handler(signal, frame):
 	"""Signal handler to catch keyboard interrupt signals.
+
 	Args:
 		signal
 		frame
@@ -163,7 +164,6 @@ def signal_handler(signal, frame):
 
 #CLASS TRAIN
 class Train(object):
-
 	"""A class to train a DeepMRSeg model.
 	...
 	Attributes:
@@ -184,12 +184,13 @@ class Train(object):
 	#DEF INIT
 	def __init__( self, model, strategy, optimizer, num_gpu, FLAGS ):
 		"""Train class constructor to initialize Train object.
+
 		Args:
-		  model: DeepMRSeg model.
-		  strategy: Distribution strategy in use.
-		  optimizer: Optimizer to use.
-		  num_gpu: Number of GPUs available.
-		  FLAGS: Other args
+			model: DeepMRSeg model.
+			strategy: Distribution strategy in use.
+			optimizer: Optimizer to use.
+			num_gpu: Number of GPUs available.
+			FLAGS: Other args
 		"""
 		### Define Variables
 		self.model = model
@@ -327,6 +328,7 @@ class Train(object):
 	# DEF CUSTOM_LOOP
 	def custom_loop( self, train_dist_dataset, val_dist_dataset, strategy ):
 		"""Custom training and validation loop.
+
 		Args:
 		  train_dist_dataset: Training dataset created using strategy.
 		  val_dist_dataset: Validation dataset created using strategy.
@@ -335,19 +337,19 @@ class Train(object):
 		### Import modules
 		import shutil as _shutil
 
-		# DEF DIST_TRAIN_EPOCH
+		#DEF DIST_TRAIN_EPOCH
 		@_tf.function
 		def distributed_train_epoch(ds):
 			strategy.run( self.train_step, args=(ds,) )
-		# ENDDEF DIST_TRAIN_EPOCH
+		#ENDDEF DIST_TRAIN_EPOCH
 
-		# DEF DIST_VAL_EPOCH
+		#DEF DIST_VAL_EPOCH
 		@_tf.function
 		def distributed_val_epoch(ds):
 			strategy.run( self.val_step, args=(ds,) )
-		# ENDDEF DIST_VAL_EPOCH
+		#ENDDEF DIST_VAL_EPOCH
 
-		# DEF 		
+		#DEF
 		def pop_extend( arr,val ):
 			arr_list = arr.tolist()
 			if len(arr) >= self.patience:
@@ -355,7 +357,7 @@ class Train(object):
 			arr_list.extend( [val] )
 			
 			return _np.array(arr_list)
-		# ENDDEF
+		#ENDDEF
 
 		# Setup summary writers
 		#IF
@@ -523,7 +525,7 @@ class Train(object):
 					_tf.summary.image( "Confusion Matrix", cm_image, step=epoch )
 				#ENDWITH
 			#ENDIF
-		# ENDFOR EACH EPOCH		
+		# ENDFOR EACH EPOCH
    	# ENDDEF CUSTOM_LOOP
 #ENDCLASS TRAIN
 
@@ -688,7 +690,6 @@ def _main():
 		#WITH
 		with open(FLAGS.sList) as f:
 			reader = _csv.DictReader( f )
-			idcolumn = FLAGS.idCol
 	
 			#FOR
 			for row in reader:
@@ -724,12 +725,12 @@ def _main():
 	train_sublist = all_sublist[ p: ]
 
 	print( "\nTraining subjects: " )
-	for i in range( len(train_sublist) ):
-		print( '\t%s' % (train_sublist[i]) )
+	for sub in train_sublist:
+		print( '\t%s' % (sub) )
 		
 	print( "\nValidation subjects: " )
-	for i in range( len(val_sublist) ):
-		print( '\t%s' % (val_sublist[i]) )
+	for sub in val_sublist:
+		print( '\t%s' % (sub) )
 	
 	### Loading data
 	print("\nLoading data to ", tmpDir)
@@ -804,7 +805,7 @@ def _main():
 	###########################
 	print("\n")
 
-	# WITH CPU DEVICE
+	#WITH CPU DEVICE
 	with _tf.device( '/cpu:0' ):
 
 		#DEF
@@ -829,7 +830,7 @@ def _main():
 				list( [FLAGS.xy_width,FLAGS.xy_width,1] ) )
 
 			return image, label
-		# ENDDEF
+		#ENDDEF
 
 		### TRAINING DATASET
 		print("\n")
@@ -846,7 +847,7 @@ def _main():
 						batch_size=GLOBAL_BATCH_SIZE*8, \
 						mode=_tf.estimator.ModeKeys.EVAL )
 						
-	# ENDWITH CPU DEVICE
+	#ENDWITH CPU DEVICE
 
 
 	####################################
@@ -855,7 +856,7 @@ def _main():
 	print("\nWithin the Distributed Strategy...\n")
 	_sys.stdout.flush()
 
-	# WITH STRATEGY
+	#WITH STRATEGY
 	with strategy.scope():
 
 		### Create the model
@@ -906,7 +907,7 @@ def _main():
 		
 		### Train the model
 		trainer.custom_loop( train_ds_dist, val_ds_dist, strategy )
-	# ENDWITH STRATEGY
+	#ENDWITH STRATEGY
 
 
 
@@ -925,7 +926,7 @@ def _main():
 		#ENDTRY
 	#ENDIF
 
-	### Print resource 
+	### Print resource
 	print("\nResource usage for this process")
 	print("\tetime \t:", _np.round( ( _time.time() - startTimeStamp )/60, 2 ), "mins")
 	
@@ -940,7 +941,7 @@ def _main():
 		
 		_sys.stdout.flush()
 	#ENDIF
-# ENDDEF MAIN
+#ENDDEF MAIN
 	
 
 
