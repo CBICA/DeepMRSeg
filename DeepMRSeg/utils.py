@@ -14,8 +14,8 @@ import itertools as _itertools
 ### Taken from: https://www.tensorflow.org/tensorboard/image_summaries
 #DEF
 def plot_confusion_matrix(cm, class_names):
-	"""
-	Returns a matplotlib figure containing the plotted confusion matrix.
+	"""Returns a matplotlib figure containing the plotted confusion matrix.
+
 	Args:
 		cm (array, shape = [n, n]): a confusion matrix of integer classes
 		class_names (array, shape = [n]): String names of the integer classes
@@ -59,8 +59,7 @@ def plot_confusion_matrix(cm, class_names):
 ### Taken from: 
 #DEF
 def plot_to_image(figure):
-	"""Converts the matplotlib plot specified by 'figure' to a PNG image and
-	returns it. The supplied figure is closed and inaccessible after this call."""
+	"""Converts the matplotlib plot specified by 'figure' to a PNG image and returns it. The supplied figure is closed and inaccessible after this call."""
 	# Save the plot to a PNG in memory.
 	buf = _io.BytesIO()
 	_plt.savefig(buf, format='png')

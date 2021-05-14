@@ -16,14 +16,14 @@ def checkFiles( refImg=None, otherImg=None, labImg=None ):
 
 	### Import modules
 	import nibabel as _nib
-	
+
 	### Check if the files exist
 	pythonUtilities.checkFile( refImg )
-	if labImg: 
+	if labImg:
 		pythonUtilities.checkFile( labImg )
 	if otherImg:
-		for m in range( len(otherImg) ):
-			pythonUtilities.checkFile( otherImg[m] )
+		for m in otherImg:
+			pythonUtilities.checkFile( m )
 	
 	### Load files
 	ref = _nib.load( refImg )
@@ -111,7 +111,7 @@ def extractDataForSubject( otherImg=None, refImg=None, labImg=None, \
 				ressize=1, orient='LPS', out_path=None, xy_width=320, rescalemethod='minmax' ):
 	
 	### Load images
-	ref,_ = loadrespadsave( refImg,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod ) 
+	ref,_ = loadrespadsave( refImg,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )
 	lab,_ = loadrespadsave( labImg,xy_width,ressize,orient,mask=1 )
 	others = []
 	for img in otherImg:
@@ -151,8 +151,7 @@ def extractPkl( subListFile, idcolumn, labCol, refMod, otherMods, num_modalities
 	import csv as _csv
 	import tfrecordutils
 	
-	### Extract data for training	
-	
+	### Extract data for training
 	#WITH
 	with open(subListFile) as f:
 		reader = _csv.DictReader( f )
@@ -209,7 +208,7 @@ def extractPkl( subListFile, idcolumn, labCol, refMod, otherMods, num_modalities
 					pos_sample_labels = imlab[ _np.where( imlab.sum(axis=(3,2,1)) > 0 ), :,:,: ][ 0 ]
 				
 					#FOR
-					for i in range( 1,pos_label_balance ):
+					for _ in range( 1,pos_label_balance ):
 						imlab = _np.append( imlab,pos_sample_labels,axis=0 )
 						imdat = _np.append( imdat,pos_sample_slices,axis=0 )
 					#ENDFOR

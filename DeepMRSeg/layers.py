@@ -84,6 +84,7 @@ def maxpool_layer( inp, pool, stride ):
 
 #DEF
 def get_onehot( y,ls,xy,c ):
+	#IF
 	if ls>0:
 		oh = _tf.one_hot( \
 			indices=_tf.reshape( y,[-1,xy,xy] ), \
@@ -96,11 +97,12 @@ def get_onehot( y,ls,xy,c ):
 					)
 		
 		return ( oh * (1 - rls) + 0.5 * rls )
-	
+
 	else:
 		return _tf.one_hot( \
 			indices=_tf.reshape( y,[-1,xy,xy] ), \
 			 depth=c )
+	#ENDIF
 #ENDDEF
 
 ###################################################################

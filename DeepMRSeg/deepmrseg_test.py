@@ -52,7 +52,7 @@ def read_flags():
 				help="absolute path to the directory where the model \
 					should be loaded from. \
 					You can provide multiple paths")
-	
+
 #	INPUT IMAGE
 #	===========
 	inpArgs = parser.add_argument_group( 'INPUT IMAGE' )
@@ -106,6 +106,7 @@ def read_flags():
 #DEF
 def signal_handler(signal, frame):
 	"""Signal handler to catch keyboard interrupt signals.
+
 	Args:
 		signal
 		frame
@@ -121,8 +122,8 @@ class LoadModel():
 
 	# DEF
 	def __init__( self, checkpoint ):
-		"""
-		LoadModel class constructor to load models from checkpoints.
+		"""LoadModel class constructor to load models from checkpoints.
+
 		Args:
 			checkpoint: path to checkpoint
 		"""
@@ -131,7 +132,8 @@ class LoadModel():
 		
 	# DEF
 	def run( self, im_slice ):
-		""" Running the activation operation previously imported.
+		"""Running the activation operation previously imported.
+
 		Args:
 			im_slice: image slice of shape (b,x,y,m)
 		"""
@@ -146,7 +148,7 @@ def extractDataForSubject( otherImg=None,refImg=None,ressize=1, \
 			orient='LPS', xy_width=320, rescalemethod='minmax' ):
 	
 	### Load images
-	ref,_ = loadrespadsave( refImg,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod ) 
+	ref,_ = loadrespadsave( refImg,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )
 	others =[]
 	for img in otherImg:
 		others.extend( [ loadrespadsave( img,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )[0] ] )
@@ -174,9 +176,9 @@ def extractDataForSubject( otherImg=None,refImg=None,ressize=1, \
 #ENDDEF
 
 #DEF
-def loadModel( models,cp ):
+def load_model( models,cp ):
 	models.extend( [ LoadModel(checkpoint=cp) ] )
-#ENDDEF	
+#ENDDEF
 
 #DEF
 def runModel( im_dat, num_classes, allmodels, bs ):
@@ -240,14 +242,13 @@ def saveOutput( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
 
 	### Import more modules
 	import nibabel as _nib
-	import csv as _csv
 	from concurrent.futures import ThreadPoolExecutor as _TPE
 
 	### Read reference image
 	inImg = _nib.load( refImg )
 	
 	### Resample refImg
-	inImg_res,inImg_res_F = loadrespadsave( in_path=refImg, \
+	_,inImg_res_F = loadrespadsave( in_path=refImg, \
 					xy_width=xy_width, \
 					ressize=ressize, \
 					orient=orient, \
@@ -453,11 +454,11 @@ def _main():
 			for checkpoint in _os.listdir( mDir ):
 				cppath = _os.path.join( mDir + '/' + checkpoint )
 				print( "\t\t-->	Loading ", _os.path.basename(cppath) )
-				executor.submit( loadModel,allmodels,cppath )
+				executor.submit( load_model,allmodels,cppath )
 			# ENDFOR ALL CHECKPOINTS
 		# ENDFOR ALL MODEL DIRS
 	#ENDWITH
-	print("")	
+	print("")
 	_sys.stdout.flush()
 	
 	### Encode indices to ROIs if provided
@@ -560,7 +561,7 @@ def _main():
 	
 	#resource package only available in Unix
 	if _platform.system() != 'Windows':
-		import resource as _resource 
+		import resource as _resource
 	
 		rus = _resource.getrusage(0)
 		print("\tutime \t:", _np.round( rus.ru_utime, 2 ))
@@ -571,7 +572,7 @@ def _main():
 # ENDDEF MAIN
 	
 #IF
-if __name__ == '__main__':	
+if __name__ == '__main__':
 	_main()
 #ENDIF
 

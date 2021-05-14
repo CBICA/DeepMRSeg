@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""
-@author: Ashish Singh
-"""
+"""Setup tool for DeepMRSeg."""
+__author__ 	= 'Ashish Singh'
+
 import setuptools
 
 with open("README.md", "r") as fh:
@@ -21,11 +21,11 @@ setuptools.setup(
 	'matplotlib',
 	'tensorflow~=2.3.0',
 	'tensorflow-addons',
-	'dill', 
-	'h5py==2.10.0', 
-	'hyperopt', 
+	'dill',
+	'h5py==2.10.0',
+	'hyperopt',
 	'keras',
-#	'pandas', 
+#	'pandas',
 	'numpy',
 	'protobuf',
 	'pymongo',
