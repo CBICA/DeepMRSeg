@@ -64,7 +64,6 @@ def preprocessImage( T1Img=None, FLImg=None, dest=None, n_jobs=4, verbose=0, cos
 
 	### Get file attributes
 	_,T1bName,_ = pythonUtilities.FileAtt( T1Img )
-	_,FLbName,_ = pythonUtilities.FileAtt( FLImg )
 
 	###### Linearly registering T1 to FL
 	print("\n\t---->	Linearly registering T1 to FL ...")

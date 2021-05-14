@@ -122,7 +122,8 @@ class LoadModel():
 
 	# DEF
 	def __init__( self, checkpoint ):
-		"""LoadModel class constructor to load models from checkpoints.
+		"""
+		LoadModel class constructor to load models from checkpoints.
 
 		Args:
 			checkpoint: path to checkpoint

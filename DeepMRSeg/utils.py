@@ -14,7 +14,8 @@ import itertools as _itertools
 ### Taken from: https://www.tensorflow.org/tensorboard/image_summaries
 #DEF
 def plot_confusion_matrix(cm, class_names):
-	"""Returns a matplotlib figure containing the plotted confusion matrix.
+	"""
+	Returns a matplotlib figure containing the plotted confusion matrix.
 
 	Args:
 		cm (array, shape = [n, n]): a confusion matrix of integer classes
