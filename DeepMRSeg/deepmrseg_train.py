@@ -844,7 +844,7 @@ def _main():
 		print("\n")
 		val_ds = data_reader( filenames=val_filenames, \
 						reader_func=tfrecordreader, \
-						batch_size=GLOBAL_BATCH_SIZE*8, \
+						batch_size=GLOBAL_BATCH_SIZE*4, \
 						mode=_tf.estimator.ModeKeys.EVAL )
 						
 	#ENDWITH CPU DEVICE
