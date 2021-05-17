@@ -6,21 +6,25 @@ import tempfile
 import time
 
 ### Calculate the execution time for the script to finish
+#DEF
 def executionTime(executionTimestartTimeStamp):
 
 	executionTimeendTimeStamp = time.time()
 	executionTimetotal = (executionTimeendTimeStamp - executionTimestartTimeStamp) / 60
-	
-	print("\nExecution time: " + str(round(executionTimetotal, 2)) + " mins")
 
+	print("\nExecution time: " + str(round(executionTimetotal, 2)) + " mins")
+#ENDDEF
 
 ### Check if the input file exists
+#DEF
 def checkFile(checkFileIP):
 	if not os.path.exists(checkFileIP):
 		print("\nERROR: Input file " + checkFileIP + " does not exist! Aborting operations ...")
 		sys.exit(1)
+#ENDDEF
 
 ### Get File Attributes
+#DEF
 def FileAtt(FileAttIP):
 	
 	ACCEPTED_FILE_TYPES = [ 'nii.gz', 'hdr', 'img', 'nii' ]
@@ -45,8 +49,10 @@ def FileAtt(FileAttIP):
 	else:
 		print("\nERROR: Input file extension not recognized! Please check ...")
 		sys.exit(1)
+#ENDDEF
 
 ### Creating temporary directory
+#DEF
 def createTempDir(tmpDirPref, tmpDir):
 
 	# Create the parent directory if it is provided
@@ -57,3 +63,4 @@ def createTempDir(tmpDirPref, tmpDir):
 	TMP = tempfile.mkdtemp( prefix=tmpDirPref, dir=tmpDir)
 	
 	return TMP
+#ENDDEF

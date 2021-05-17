@@ -3,7 +3,6 @@
 __author__ 	= 'Jimit Doshi'
 __EXEC_NAME__ 	= "data_augmentation"
 
-import os as _os
 import tensorflow as _tf
 import tensorflow_addons as _tfa
 import numpy as _np
@@ -20,19 +19,19 @@ def perturb_images( img,lab ):
 #	randcond  = _tf.random.uniform( [], 0, 2, dtype=_tf.int32 )
 #	img = _tf.cond( randcond>0, \
 #			lambda: _tf.image.flip_left_right( img ), \
-#			lambda: img ); 
+#			lambda: img );
 #	lab = _tf.cond( randcond>0, \
 #			lambda: _tf.image.flip_left_right( lab ), \
-#			lambda: lab ); 
-	
+#			lambda: lab );
+
 #	# flip up/down
 #	randcond  = _tf.random.uniform( [], 0, 2, dtype=_tf.int32 )
 #	img = _tf.cond( randcond>0, \
 #			lambda: _tf.image.flip_up_down( img ), \
-#			lambda: img ); 
+#			lambda: img );
 #	lab = _tf.cond( randcond>0, \
 #			lambda: _tf.image.flip_up_down( lab ), \
-#			lambda: lab ); 
+#			lambda: lab );
 
 	# rotate with the random angle
 	randcond  = _tf.random.uniform( [], 0, 2, dtype=_tf.int32 )
@@ -107,17 +106,17 @@ def perturb_images( img,lab ):
 
 #ENDDEF
 
-#DEF 
+#DEF
 def data_reader( filenames,reader_func,batch_size,mode ):
 
 	# Generate TFRecordDataset
 	ds = _tf.data.TFRecordDataset( filenames, compression_type='GZIP', \
 					num_parallel_reads=_tf.data.experimental.AUTOTUNE )
-	print(ds)		
+	print(ds)
 
 	# Shuffle data
 	if mode == _tf.estimator.ModeKeys.TRAIN:
-		ds = ds.shuffle( buffer_size=100, reshuffle_each_iteration=True ); 
+		ds = ds.shuffle( buffer_size=100, reshuffle_each_iteration=True )
 		print(ds)		
 
 	# Read TFRecords
@@ -138,7 +137,7 @@ def data_reader( filenames,reader_func,batch_size,mode ):
 
 	# Randomly augment data
 	if mode == _tf.estimator.ModeKeys.TRAIN:
-		ds = ds.map( map_func=perturb_images, num_parallel_calls=_tf.data.experimental.AUTOTUNE ) 
+		ds = ds.map( map_func=perturb_images, num_parallel_calls=_tf.data.experimental.AUTOTUNE )
 		print(ds)		
 
 	# Prefetch data
@@ -146,7 +145,7 @@ def data_reader( filenames,reader_func,batch_size,mode ):
 	print(ds)
 
 #	# Cache
-#	ds = ds.cache() 
+#	ds = ds.cache()
 #	print(ds)		
 
 	return ds

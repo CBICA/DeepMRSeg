@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""
-@author: Ashish Singh
-"""
+"""Setup tool for DeepMRSeg."""
+__author__ 	= 'Ashish Singh'
+
 import setuptools
 
 with open("README.md", "r") as fh:
@@ -18,14 +18,15 @@ setuptools.setup(
     url="https://github.com/CBICA/DeepMRSeg",
     packages=setuptools.find_packages(),
 	install_requires=[
-	'tensorflow~=2.2.0',
-	'tensorflow-addons==0.11.2',
-	'dill', 
-	'h5py==2.10.0', 
-	'hyperopt', 
+	'matplotlib',
+	'tensorflow~=2.3.0',
+	'tensorflow-addons',
+	'dill',
+	'h5py==2.10.0',
+	'hyperopt',
 	'keras',
-#	'pandas', 
-	'numpy~=1.18.4',
+#	'pandas',
+	'numpy',
 	'protobuf',
 	'pymongo',
 	'scikit-learn',
@@ -35,7 +36,7 @@ setuptools.setup(
 	'resource'
 	],
 	entry_points = {
-    'console_scripts': ['deepmrseg_train=DeepMRSeg.deepmrseg_train:_main', 
+    'console_scripts': ['deepmrseg_train=DeepMRSeg.deepmrseg_train:_main',
 			'deepmrseg_test=DeepMRSeg.deepmrseg_test:_main'],
     },
     classifiers=(

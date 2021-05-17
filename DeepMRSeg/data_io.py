@@ -4,11 +4,11 @@ __author__ 	= 'Jimit Doshi'
 __EXEC_NAME__ 	= "data_io"
 
 import os as _os
-import sys as _sys
 import numpy as _np
 
 from . import rescaleimages
 from . import pythonUtilities
+from . import tfrecordutils
 
 ################################################ FUNCTIONS ################################################
 
@@ -17,14 +17,14 @@ def checkFiles( refImg=None, otherImg=None, labImg=None ):
 
 	### Import modules
 	import nibabel as _nib
-	
+
 	### Check if the files exist
 	pythonUtilities.checkFile( refImg )
-	if labImg: 
+	if labImg:
 		pythonUtilities.checkFile( labImg )
 	if otherImg:
-		for m in range( len(otherImg) ):
-			pythonUtilities.checkFile( otherImg[m] )
+		for m in otherImg:
+			pythonUtilities.checkFile( m )
 	
 	### Load files
 	ref = _nib.load( refImg )
@@ -61,10 +61,16 @@ def loadrespadsave( in_path,xy_width,ressize,orient='LPS',mask=0,rescalemethod='
 	### Import modules
 	import nibabel as _nib
 	import nibabel.processing as _nibp
-	from scipy.ndimage.interpolation import zoom as _zoom
 	
-	### Load image
-	FileRead = _nib.load( in_path )
+	### Load image if it is a file path
+	#IF
+	if _os.path.isfile(in_path):
+		FileRead = _nib.load( in_path )
+	### Else, verify if it is a nibabel object with a header
+	else:
+		assert in_path.header
+		FileRead = in_path
+	#ENDIF
     
 	### Re-orient, resample and resize the image
 	#IF
@@ -106,7 +112,7 @@ def extractDataForSubject( otherImg=None, refImg=None, labImg=None, \
 				ressize=1, orient='LPS', out_path=None, xy_width=320, rescalemethod='minmax' ):
 	
 	### Load images
-	ref,_ = loadrespadsave( refImg,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod ) 
+	ref,_ = loadrespadsave( refImg,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )
 	lab,_ = loadrespadsave( labImg,xy_width,ressize,orient,mask=1 )
 	others = []
 	for img in otherImg:
@@ -125,6 +131,7 @@ def extractDataForSubject( otherImg=None, refImg=None, labImg=None, \
 		others[m] = others[m].reshape( ( others[m].shape+(1,) ) )
 
 	### Return appended T1 and FL and the wml
+	#IF
 	if len(otherImg) > 0:
 		allMods = ref.copy()
 		for m in range( len(otherImg) ):
@@ -133,7 +140,7 @@ def extractDataForSubject( otherImg=None, refImg=None, labImg=None, \
 		return allMods, lab
 	else:
 		return ref, lab
-	
+	#ENDIF
 #ENDDEF
 
 #DEF
@@ -143,10 +150,8 @@ def extractPkl( subListFile, idcolumn, labCol, refMod, otherMods, num_modalities
 
 	### Import modules
 	import csv as _csv
-	import tfrecordutils
 	
-	### Extract data for training	
-	
+	### Extract data for training
 	#WITH
 	with open(subListFile) as f:
 		reader = _csv.DictReader( f )
@@ -203,7 +208,7 @@ def extractPkl( subListFile, idcolumn, labCol, refMod, otherMods, num_modalities
 					pos_sample_labels = imlab[ _np.where( imlab.sum(axis=(3,2,1)) > 0 ), :,:,: ][ 0 ]
 				
 					#FOR
-					for i in range( 1,pos_label_balance ):
+					for _ in range( 1,pos_label_balance ):
 						imlab = _np.append( imlab,pos_sample_labels,axis=0 )
 						imdat = _np.append( imdat,pos_sample_slices,axis=0 )
 					#ENDFOR

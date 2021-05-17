@@ -1,6 +1,4 @@
-#!/usr/bin/env python
-
-"""Rescales images"""
+"""Rescales images."""
 
 ################################################ DECLARATIONS ################################################
 __author__ 	= 'Jimit Doshi'
@@ -10,9 +8,9 @@ import numpy as _np
 
 ################################################ FUNCTIONS ################################################
 
-#DEF	
+#DEF
 def rescaleImage( image, minInt=0, maxInt=255, perc=99.9, method='minmax' ):
-	""" Rescale image intensities to specified range
+	"""Rescale image intensities to specified range.
 
 	Parameters
 	----------
@@ -39,22 +37,20 @@ def rescaleImage( image, minInt=0, maxInt=255, perc=99.9, method='minmax' ):
 	--------
 
 	"""
-	
 	### Convert image to float
 	image = image.astype('float')
 	
 	### z-score image
 	rescaledImage = ( image - _np.mean( image ) ) / _np.std( image )
 
-	# IF METHOD	
+	#IF METHOD
 	if method == 'minmax':
 		### Shift minimum intensity first to minInt
 		rescaledImage = rescaledImage - _np.min( rescaledImage ) + minInt
 
 		### Rescale intensities so the max value in the image gets mapped to maxInt
 		rescaledImage = rescaledImage / _np.percentile( rescaledImage, perc ) * maxInt
-
-	# ENDIF METHOD
+	#ENDIF METHOD
 		
 	### Return rescaledImage
 	return rescaledImage

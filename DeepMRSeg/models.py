@@ -22,7 +22,7 @@ def create_model( 	num_classes=2, \
 			layers=1, \
 			lite=False, \
 			norm='batch' ):
-			
+
 	#####################
 	#### INPUT LAYER ####
 	#####################

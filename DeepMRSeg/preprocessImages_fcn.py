@@ -11,7 +11,6 @@ import time as _time
 import signal as _signal
 import getopt as _getopt
 import subprocess as _subprocess
-import nibabel as _nib
 import numpy as _np
 
 from . import pythonUtilities
@@ -21,8 +20,7 @@ from . import pythonUtilities
 # Usage info
 #DEF
 def help():
-
-	"""usage information"""
+	"""Usage information."""
 	print(r"""
 %(EXEC)s--
 
@@ -54,7 +52,6 @@ ERROR: Not enough arguments!!
 ### Define signal trap function
 #DEF
 def signal_handler(signal, frame):
-	
 	print('Program interrupt signal received! Aborting operations ...')
 	_sys.exit(0)
 #ENDDEF
@@ -66,8 +63,7 @@ def preprocessImage( T1Img=None, FLImg=None, dest=None, n_jobs=4, verbose=0, cos
 	_os.environ[ "FSLOUTPUTTYPE" ] = "NIFTI_GZ"
 
 	### Get file attributes
-	T1dName, T1bName, T1Ext = pythonUtilities.FileAtt( T1Img )
-	FLdName, FLbName, FLExt = pythonUtilities.FileAtt( FLImg )
+	_,T1bName,_ = pythonUtilities.FileAtt( T1Img )
 
 	###### Linearly registering T1 to FL
 	print("\n\t---->	Linearly registering T1 to FL ...")
@@ -99,16 +95,13 @@ def preprocessImage( T1Img=None, FLImg=None, dest=None, n_jobs=4, verbose=0, cos
 	finally:
 		_sys.stdout.flush()
 	#ENDTRY
-
-#ENDDEF		
+#ENDDEF
 
 
 ############## MAIN ##############
 #DEF
 def _main( argv ):
 
-	#argv = _sys.argv 
-	
 	### Check the number of arguments
 	if len( argv ) < 2:
 		help()
@@ -142,14 +135,14 @@ def _main( argv ):
 	print("\nParsing args 	: ", argv[ 1: ])
 	#TRY
 	try:
-		opts, args = _getopt.getopt( argv[1:], "", \
+		opts,_ = _getopt.getopt( argv[1:], "", \
 				[ "T1=", "FL=", \
 				"dest=", "cost=", \
 				"verb=", "nJobs=" ] )
 
 	except _getopt.GetoptError as err:
-		print("\n\nERROR!", err)	
-		help()	
+		print("\n\nERROR!", err)
+		help()
 	#ENDTRY
 
 	_sys.stdout.flush()
@@ -206,6 +199,6 @@ def _main( argv ):
 ################################################ MAIN BODY ################################################
 
 #IF
-if __name__ == '__main__':	
+if __name__ == '__main__':
 	_main( _sys.argv )
 #ENDIF
