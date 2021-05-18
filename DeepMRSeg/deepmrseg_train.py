@@ -377,6 +377,7 @@ class Train(object):
 	
 		# Get start time
 		est = _time.time()
+		i = 0
 		
 		# Min loss at each epoch
 		loss_min = _np.ones( self.max_to_keep ) * 100000
@@ -416,6 +417,23 @@ class Train(object):
 			# FOR EACH TRAIN BATCH
 			for one_batch in train_dist_dataset:
 				distributed_train_epoch( one_batch )
+
+				# IF DISPLAY TRAINING METRICS
+				if i%1000 == 0:
+					timeperiter = (_time.time()-est) / (i+1) * 1000 / 60.
+					print( "\t\titerations : %d, time per 1000 iterations: %.2f mins" % \
+									( i, timeperiter ) )
+
+					print( "\t\t\t training metrics \t: mIOU: %.4f, Loss: %.4f (%.4f,%.4f,%.4f)" \
+							% ( self.iou_train.result(), \
+							self.epoch_train_loss_avg.result(), \
+							self.epoch_train_ioul_avg.result(), \
+							self.epoch_train_mael_avg.result(), \
+							self.epoch_train_bcel_avg.result() ) )
+
+					_sys.stdout.flush()
+				# ENDIF
+				i += 1
 			# ENDFOR EACH TRAIN BATCH
 			
 			### Checkpoint model
