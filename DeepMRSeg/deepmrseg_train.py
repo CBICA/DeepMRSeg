@@ -361,8 +361,8 @@ class Train(object):
 		if self.summary:
 			import datetime as _datetime
 			current_time = _datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-			train_log_dir = self.mdlDir + '/logs/gradient_tape/' + current_time + '/train'
-			val_log_dir = self.mdlDir + '/logs/gradient_tape/' + current_time + '/validation'
+			train_log_dir = self.mdlDir + '/summaries/gradient_tape/' + current_time + '/train'
+			val_log_dir = self.mdlDir + '/summaries/gradient_tape/' + current_time + '/validation'
 			train_summary_writer = _tf.summary.create_file_writer(train_log_dir)
 			val_summary_writer = _tf.summary.create_file_writer(val_log_dir)
 		#ENDIF
