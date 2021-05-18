@@ -63,7 +63,7 @@ def preprocessImage( T1Img=None, FLImg=None, dest=None, n_jobs=4, verbose=0, cos
 	_os.environ[ "FSLOUTPUTTYPE" ] = "NIFTI_GZ"
 
 	### Get file attributes
-	_,T1bName,_ = pythonUtilities.FileAtt( T1Img )
+	_,T1bName,_ = pythonUtilities.file_att( T1Img )
 
 	###### Linearly registering T1 to FL
 	print("\n\t---->	Linearly registering T1 to FL ...")
@@ -153,16 +153,16 @@ def _main( argv ):
 		#IF
 		if o in [ "--T1" ]:
 			T1 = str(a)
-			pythonUtilities.checkFile( T1 )
+			pythonUtilities.check_file( T1 )
 
-			T1dName, T1bName, T1Ext = pythonUtilities.FileAtt( T1 )
+			T1dName, T1bName, T1Ext = pythonUtilities.file_att( T1 )
 			T1Img = T1dName + '/' + T1bName + T1Ext
 
 		elif o in [ "--FL" ]:
 			FL = str(a)
-			pythonUtilities.checkFile( FL )
+			pythonUtilities.check_file( FL )
 
-			FLdName, FLbName, FLExt = pythonUtilities.FileAtt( FL )
+			FLdName, FLbName, FLExt = pythonUtilities.file_att( FL )
 			FLImg = FLdName + '/' + FLbName + FLExt
 
 		elif o in [ "--dest" ]:

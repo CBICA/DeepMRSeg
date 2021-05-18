@@ -16,10 +16,10 @@ _sys.path.append( _os.path.dirname( _sys.argv[0] ) )
 
 from . import losses
 
-from .data_io import checkFiles, extractPkl
+from .data_io import check_files, extract_pkl
 from .models import create_model
 from .data_augmentation import data_reader
-from .optimizers import getAdamOpt, getRMSOpt, getSGDOpt, getMomentumOpt
+from .optimizers import get_adam_opt, get_rms_opt, get_sgd_opt, get_momentum_opt
 from .layers import get_onehot
 
 from . import pythonUtilities
@@ -176,9 +176,6 @@ class Train(object):
 		num_gpu: int
 			Number of GPUs available.
 		FLAGS: Other args
-	
-	Methods:
-		
 	"""
 
 	#DEF INIT
@@ -598,7 +595,7 @@ def _main():
 	# Check if input files provided exist
 	# FOR
 	for f in FLAGS.sList, FLAGS.roi:
-		pythonUtilities.checkFile( f )
+		pythonUtilities.check_file( f )
 	# ENDFOR
 	
 	# Check if xy_width matches the depth
@@ -719,7 +716,7 @@ def _main():
 					for mod in otherMods:
 						otherModsFileList.extend( [ row[mod] ] )
 
-				executor.submit( checkFiles, \
+				executor.submit( check_files, \
 						refImg=row[FLAGS.refMod], \
 						labImg=row[FLAGS.labCol], \
 						otherImg=otherModsFileList )
@@ -776,7 +773,7 @@ def _main():
 			### If tfrecord doesn't exist, create it
 			#IF
 			if not _os.path.isfile( pref ):
-				executor.submit( extractPkl, \
+				executor.submit( extract_pkl, \
 						subListFile=FLAGS.sList, \
 						idcolumn=FLAGS.idCol, \
 						labCol=FLAGS.labCol, \
@@ -893,13 +890,13 @@ def _main():
 		print("\nDefining the Optimizer...")
 		# IF OPTIMIZER
 		if FLAGS.optimizer == 'Adam':
-			optimizer = getAdamOpt( FLAGS.learning_rate )
+			optimizer = get_adam_opt( FLAGS.learning_rate )
 		elif FLAGS.optimizer == 'RMSProp':
-			optimizer = getRMSOpt( FLAGS.learning_rate )
+			optimizer = get_rms_opt( FLAGS.learning_rate )
 		elif FLAGS.optimizer == 'SGD':
-			optimizer = getSGDOpt( FLAGS.learning_rate )
+			optimizer = get_sgd_opt( FLAGS.learning_rate )
 		elif FLAGS.optimizer == 'Momentum':
-			optimizer = getMomentumOpt( FLAGS.learning_rate )
+			optimizer = get_momentum_opt( FLAGS.learning_rate )
 		# ENDIF OPTIMIZER
 		print( optimizer.get_config() )
 
@@ -968,6 +965,6 @@ def _main():
 ################################################ MAIN BODY ################################################
 
 #IF
-if __name__ == '__main__':	
+if __name__ == '__main__':
 	 _main()
 #ENDIF

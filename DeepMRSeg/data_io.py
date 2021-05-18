@@ -13,19 +13,19 @@ from . import tfrecordutils
 ################################################ FUNCTIONS ################################################
 
 #DEF
-def checkFiles( refImg=None, otherImg=None, labImg=None ):
+def check_files( refImg=None, otherImg=None, labImg=None ):
 
 	### Import modules
 	import nibabel as _nib
 
 	### Check if the files exist
-	pythonUtilities.checkFile( refImg )
+	pythonUtilities.check_file( refImg )
 	if labImg:
-		pythonUtilities.checkFile( labImg )
+		pythonUtilities.check_file( labImg )
 	if otherImg:
 		for m in otherImg:
-			pythonUtilities.checkFile( m )
-	
+			pythonUtilities.check_file( m )
+
 	### Load files
 	ref = _nib.load( refImg )
 	if labImg:
@@ -56,7 +56,7 @@ def checkFiles( refImg=None, otherImg=None, labImg=None ):
 #ENDDEF
 
 #DEF
-def loadrespadsave( in_path,xy_width,ressize,orient='LPS',mask=0,rescalemethod='minmax',out_path=None ):
+def load_res_norm( in_path,xy_width,ressize,orient='LPS',mask=0,rescalemethod='minmax',out_path=None ):
 
 	### Import modules
 	import nibabel as _nib
@@ -95,7 +95,7 @@ def loadrespadsave( in_path,xy_width,ressize,orient='LPS',mask=0,rescalemethod='
 
     	### Rescale image
 	if mask == 0:
-		FileDat = rescaleimages.rescaleImage( FileDat, minInt=0, maxInt=1, perc=99.9, method=rescalemethod )
+		FileDat = rescaleimages.rescale_image( FileDat, minInt=0, maxInt=1, perc=99.9, method=rescalemethod )
     		
 	# IF
 	# Save as numpy file
@@ -108,15 +108,15 @@ def loadrespadsave( in_path,xy_width,ressize,orient='LPS',mask=0,rescalemethod='
 #ENDDEF
 
 #DEF
-def extractDataForSubject( otherImg=None, refImg=None, labImg=None, \
+def extract_data_for_subject( otherImg=None, refImg=None, labImg=None, \
 				ressize=1, orient='LPS', out_path=None, xy_width=320, rescalemethod='minmax' ):
 	
 	### Load images
-	ref,_ = loadrespadsave( refImg,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )
-	lab,_ = loadrespadsave( labImg,xy_width,ressize,orient,mask=1 )
+	ref,_ = load_res_norm( refImg,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )
+	lab,_ = load_res_norm( labImg,xy_width,ressize,orient,mask=1 )
 	others = []
 	for img in otherImg:
-		others.extend( [ loadrespadsave( img,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )[0] ] )
+		others.extend( [ load_res_norm( img,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )[0] ] )
 		
 	### Restructure matrices from [x,y,z] to [z,x,y]
 	ref = _np.moveaxis( ref,2,0 )
@@ -144,7 +144,7 @@ def extractDataForSubject( otherImg=None, refImg=None, labImg=None, \
 #ENDDEF
 
 #DEF
-def extractPkl( subListFile, idcolumn, labCol, refMod, otherMods, num_modalities, subjectlist, \
+def extract_pkl( subListFile, idcolumn, labCol, refMod, otherMods, num_modalities, subjectlist, \
 		roicsv=None, out_path=None, rescalemethod='minmax', xy_width=320, \
 		pos_label_balance=1, ressize=1, orient='LPS' ):
 
@@ -169,7 +169,7 @@ def extractPkl( subListFile, idcolumn, labCol, refMod, otherMods, num_modalities
 						otherModsFileList.extend( [ row[mod] ] )
 		
 				# extract data from images
-				imdat,imlab = extractDataForSubject( \
+				imdat,imlab = extract_data_for_subject( \
 						otherImg=otherModsFileList, \
 						refImg=row[refMod], \
 						labImg=row[labCol], \

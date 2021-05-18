@@ -9,7 +9,7 @@ import numpy as _np
 ################################################ FUNCTIONS ################################################
 
 #DEF
-def rescaleImage( image, minInt=0, maxInt=255, perc=99.9, method='minmax' ):
+def rescale_image( image, minInt=0, maxInt=255, perc=99.9, method='minmax' ):
 	"""Rescale image intensities to specified range.
 
 	Parameters
