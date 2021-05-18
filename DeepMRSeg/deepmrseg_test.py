@@ -484,76 +484,56 @@ def _main():
 	print("\n----> Running predictions for all subjects in the FileList")
 	_sys.stdout.flush()
 
-	#WITH TPE
-	with _TPE( max_workers=nJobs ) as executor:
-	
-		#WITH OPENFILE
-		with open(FLAGS.sList) as f:
-			reader = _csv.DictReader( f )
+	#WITH OPENFILE
+	with open(FLAGS.sList) as f:
+		reader = _csv.DictReader( f )
 
-			#FOR
-			for row in reader:
+		#FOR
+		for row in reader:
 
-				### Get image filenames
-				refImg = row[FLAGS.refMod]
-				outImg = row[FLAGS.outCol]
+			### Get image filenames
+			refImg = row[FLAGS.refMod]
+			outImg = row[FLAGS.outCol]
 
-				# Get files for other modalities
-				otherModsFileList = []
-				#IF
-				if otherMods:
-					#FOR
-					for mod in otherMods:
-						otherModsFileList.extend( [ row[mod] ] )
-					#ENDFOR
-				#ENDIF
-			
-				### Create output directory if it doesn't exist already
-				#IF
-				if not _os.path.isdir( _os.path.dirname(outImg) ):
-					_os.makedirs( _os.path.dirname(outImg) )
-				#ENDIF
+			# Get files for other modalities
+			otherModsFileList = []
+			#IF
+			if otherMods:
+				#FOR
+				for mod in otherMods:
+					otherModsFileList.extend( [ row[mod] ] )
+				#ENDFOR
+			#ENDIF
+		
+			### Create output directory if it doesn't exist already
+			#IF
+			if not _os.path.isdir( _os.path.dirname(outImg) ):
+				_os.makedirs( _os.path.dirname(outImg) )
+			#ENDIF
 
-				### Check if the file exists already
-				#IF
-				if not _os.path.isfile( outImg ):
-					print( "\t---->	%s" % ( row[FLAGS.idCol] ) )
-					_sys.stdout.flush()
-			
-#					executor.submit( predict_classes, \
-#							refImg=refImg, \
-#							otherImg=otherModsFileList, \
-#							num_classes=FLAGS.num_classes, \
-#							allmodels=allmodels, \
-#							roi_indices=roi_indices, \
-#							out=outImg, \
-#							probs=FLAGS.probs, \
-#							rescalemethod=FLAGS.rescale, \
-#							ressize=FLAGS.ressize, \
-#							orient=FLAGS.reorient, \
-#							xy_width=FLAGS.xy_width, \
-#							batch_size=FLAGS.batch, \
-#							nJobs=nJobs )
-					predict_classes( \
-							refImg=refImg, \
-							otherImg=otherModsFileList, \
-							num_classes=FLAGS.num_classes, \
-							allmodels=allmodels, \
-							roi_indices=roi_indices, \
-							out=outImg, \
-							probs=FLAGS.probs, \
-							rescalemethod=FLAGS.rescale, \
-							ressize=FLAGS.ressize, \
-							orient=FLAGS.reorient, \
-							xy_width=FLAGS.xy_width, \
-							batch_size=FLAGS.batch, \
-							nJobs=nJobs )
-						
-					_time.sleep( FLAGS.delay )
-				#ENDIF
-			#ENDFOR
-		#ENDWITH OPENFILE
-	#ENDWITH TPE
+			### Check if the file exists already
+			#IF
+			if not _os.path.isfile( outImg ):
+				print( "\t---->	%s" % ( row[FLAGS.idCol] ) )
+				_sys.stdout.flush()
+		
+				predict_classes( \
+						refImg=refImg, \
+						otherImg=otherModsFileList, \
+						num_classes=FLAGS.num_classes, \
+						allmodels=allmodels, \
+						roi_indices=roi_indices, \
+						out=outImg, \
+						probs=FLAGS.probs, \
+						rescalemethod=FLAGS.rescale, \
+						ressize=FLAGS.ressize, \
+						orient=FLAGS.reorient, \
+						xy_width=FLAGS.xy_width, \
+						batch_size=FLAGS.batch, \
+						nJobs=nJobs )
+			#ENDIF
+		#ENDFOR
+	#ENDWITH OPENFILE
 
 	### Print resouce usage
 	print("\nResource usage for this process")
