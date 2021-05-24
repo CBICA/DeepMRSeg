@@ -16,10 +16,10 @@ _sys.path.append( _os.path.dirname( _sys.argv[0] ) )
 
 from . import losses
 
-from .data_io import checkFiles, extractPkl
+from .data_io import check_files, extract_pkl
 from .models import create_model
 from .data_augmentation import data_reader
-from .optimizers import getAdamOpt, getRMSOpt, getSGDOpt, getMomentumOpt
+from .optimizers import get_adam_opt, get_rms_opt, get_sgd_opt, get_momentum_opt
 from .layers import get_onehot
 
 from . import pythonUtilities
@@ -176,9 +176,6 @@ class Train(object):
 		num_gpu: int
 			Number of GPUs available.
 		FLAGS: Other args
-	
-	Methods:
-		
 	"""
 
 	#DEF INIT
@@ -364,8 +361,8 @@ class Train(object):
 		if self.summary:
 			import datetime as _datetime
 			current_time = _datetime.datetime.now().strftime("%Y%m%d-%H%M%S")
-			train_log_dir = self.mdlDir + '/logs/gradient_tape/' + current_time + '/train'
-			val_log_dir = self.mdlDir + '/logs/gradient_tape/' + current_time + '/validation'
+			train_log_dir = self.mdlDir + '/summaries/gradient_tape/' + current_time + '/train'
+			val_log_dir = self.mdlDir + '/summaries/gradient_tape/' + current_time + '/validation'
 			train_summary_writer = _tf.summary.create_file_writer(train_log_dir)
 			val_summary_writer = _tf.summary.create_file_writer(val_log_dir)
 		#ENDIF
@@ -377,6 +374,7 @@ class Train(object):
 	
 		# Get start time
 		est = _time.time()
+		i = 0
 		
 		# Min loss at each epoch
 		loss_min = _np.ones( self.max_to_keep ) * 100000
@@ -416,6 +414,23 @@ class Train(object):
 			# FOR EACH TRAIN BATCH
 			for one_batch in train_dist_dataset:
 				distributed_train_epoch( one_batch )
+
+				# IF DISPLAY TRAINING METRICS
+				if i%1000 == 0:
+					timeperiter = (_time.time()-est) / (i+1) * 1000 / 60.
+					print( "\t\titerations : %d, time per 1000 iterations: %.2f mins" % \
+									( i, timeperiter ) )
+
+					print( "\t\t\t training metrics \t: mIOU: %.4f, Loss: %.4f (%.4f,%.4f,%.4f)" \
+							% ( self.iou_train.result(), \
+							self.epoch_train_loss_avg.result(), \
+							self.epoch_train_ioul_avg.result(), \
+							self.epoch_train_mael_avg.result(), \
+							self.epoch_train_bcel_avg.result() ) )
+
+					_sys.stdout.flush()
+				# ENDIF
+				i += 1
 			# ENDFOR EACH TRAIN BATCH
 			
 			### Checkpoint model
@@ -580,7 +595,7 @@ def _main():
 	# Check if input files provided exist
 	# FOR
 	for f in FLAGS.sList, FLAGS.roi:
-		pythonUtilities.checkFile( f )
+		pythonUtilities.check_file( f )
 	# ENDFOR
 	
 	# Check if xy_width matches the depth
@@ -701,7 +716,7 @@ def _main():
 					for mod in otherMods:
 						otherModsFileList.extend( [ row[mod] ] )
 
-				executor.submit( checkFiles, \
+				executor.submit( check_files, \
 						refImg=row[FLAGS.refMod], \
 						labImg=row[FLAGS.labCol], \
 						otherImg=otherModsFileList )
@@ -758,7 +773,7 @@ def _main():
 			### If tfrecord doesn't exist, create it
 			#IF
 			if not _os.path.isfile( pref ):
-				executor.submit( extractPkl, \
+				executor.submit( extract_pkl, \
 						subListFile=FLAGS.sList, \
 						idcolumn=FLAGS.idCol, \
 						labCol=FLAGS.labCol, \
@@ -844,7 +859,7 @@ def _main():
 		print("\n")
 		val_ds = data_reader( filenames=val_filenames, \
 						reader_func=tfrecordreader, \
-						batch_size=GLOBAL_BATCH_SIZE*8, \
+						batch_size=GLOBAL_BATCH_SIZE*4, \
 						mode=_tf.estimator.ModeKeys.EVAL )
 						
 	#ENDWITH CPU DEVICE
@@ -875,13 +890,13 @@ def _main():
 		print("\nDefining the Optimizer...")
 		# IF OPTIMIZER
 		if FLAGS.optimizer == 'Adam':
-			optimizer = getAdamOpt( FLAGS.learning_rate )
+			optimizer = get_adam_opt( FLAGS.learning_rate )
 		elif FLAGS.optimizer == 'RMSProp':
-			optimizer = getRMSOpt( FLAGS.learning_rate )
+			optimizer = get_rms_opt( FLAGS.learning_rate )
 		elif FLAGS.optimizer == 'SGD':
-			optimizer = getSGDOpt( FLAGS.learning_rate )
+			optimizer = get_sgd_opt( FLAGS.learning_rate )
 		elif FLAGS.optimizer == 'Momentum':
-			optimizer = getMomentumOpt( FLAGS.learning_rate )
+			optimizer = get_momentum_opt( FLAGS.learning_rate )
 		# ENDIF OPTIMIZER
 		print( optimizer.get_config() )
 
@@ -950,6 +965,6 @@ def _main():
 ################################################ MAIN BODY ################################################
 
 #IF
-if __name__ == '__main__':	
+if __name__ == '__main__':
 	 _main()
 #ENDIF

@@ -11,7 +11,7 @@ import tensorflow as _tf
 _sys.path.append( _os.path.dirname( _sys.argv[0] ) )
 
 
-from .layers import ResUnit_v1, ResInc_v1, conv_layer_resample_v1
+from .layers import res_unit_v1, resinc_v1, conv_layer_resample_v1
 
 ################################################ FUNCTIONS ################################################
 
@@ -50,7 +50,7 @@ def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 
 	### Add Residual layers
 	for _ in range(0,layers):
-		conv = ResUnit_v1( conv, filters=filters, ksize=ksize, norm=norm )
+		conv = res_unit_v1( conv, filters=filters, ksize=ksize, norm=norm )
 		print(conv)
 
 	skips.append(conv)
@@ -90,7 +90,7 @@ def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 
 		### Add Residual layers
 		for _ in range(0,layers):
-			conv = ResInc_v1( conv, filters=fm[-1], ksize=ksize, norm=norm )
+			conv = resinc_v1( conv, filters=fm[-1], ksize=ksize, norm=norm )
 			print(conv)
 
 		skips.append(conv)
@@ -128,7 +128,7 @@ def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 		
 		### Add Residual layers
 		for _ in range(0,layers):
-			conv = ResInc_v1( conv, filters=fm[i]*2, ksize=ksize, norm=norm )
+			conv = resinc_v1( conv, filters=fm[i]*2, ksize=ksize, norm=norm )
 			print(conv)
 
 		if i==depth-2:
@@ -158,7 +158,7 @@ def unet_resinc( inp_layer,ksize=3,depth=None,filters=32,layers=None,\
 		
 	### Add Residual layers
 	for _ in range(0,layers):
-		conv = ResUnit_v1( conv, filters=conv.shape.as_list()[-1], ksize=ksize, norm=norm )
+		conv = res_unit_v1( conv, filters=conv.shape.as_list()[-1], ksize=ksize, norm=norm )
 		print(conv)
 
 	### Logits Layer

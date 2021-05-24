@@ -1,5 +1,4 @@
-"""
-This module contains various loss functions and helper functions
+"""This module contains various loss functions and helper functions
 
 Functions:
 	get_tp_fp_fn( y_true,y_pred )
@@ -45,7 +44,7 @@ def get_tp_fp_fn( y_true,y_pred ):
 	tp = _tf.math.reduce_sum( y_true * y_pred, axis=[1,2] )
 	fp = _tf.math.reduce_sum( (1-y_true) * y_pred, axis=[1,2] )
 	fn = _tf.math.reduce_sum( y_true * (1-y_pred), axis=[1,2] )
-	
+
 	# Shape: [b,c]
 	return tp, fp, fn
 #ENDDEF

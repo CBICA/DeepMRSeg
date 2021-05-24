@@ -7,7 +7,7 @@ import time
 
 ### Calculate the execution time for the script to finish
 #DEF
-def executionTime(executionTimestartTimeStamp):
+def execution_time(executionTimestartTimeStamp):
 
 	executionTimeendTimeStamp = time.time()
 	executionTimetotal = (executionTimeendTimeStamp - executionTimestartTimeStamp) / 60
@@ -17,7 +17,7 @@ def executionTime(executionTimestartTimeStamp):
 
 ### Check if the input file exists
 #DEF
-def checkFile(checkFileIP):
+def check_file(checkFileIP):
 	if not os.path.exists(checkFileIP):
 		print("\nERROR: Input file " + checkFileIP + " does not exist! Aborting operations ...")
 		sys.exit(1)
@@ -25,7 +25,7 @@ def checkFile(checkFileIP):
 
 ### Get File Attributes
 #DEF
-def FileAtt(FileAttIP):
+def file_att(FileAttIP):
 	
 	ACCEPTED_FILE_TYPES = [ 'nii.gz', 'hdr', 'img', 'nii' ]
 
@@ -53,7 +53,7 @@ def FileAtt(FileAttIP):
 
 ### Creating temporary directory
 #DEF
-def createTempDir(tmpDirPref, tmpDir):
+def create_temp_dir(tmpDirPref, tmpDir):
 
 	# Create the parent directory if it is provided
 	if tmpDir and not os.path.exists(tmpDir):

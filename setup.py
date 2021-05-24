@@ -19,7 +19,7 @@ setuptools.setup(
     packages=setuptools.find_packages(),
 	install_requires=[
 	'matplotlib',
-	'tensorflow~=2.3.0',
+	'tensorflow~=2.3.2',
 	'tensorflow-addons',
 	'dill',
 	'h5py==2.10.0',

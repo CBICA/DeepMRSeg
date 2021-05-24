@@ -13,15 +13,6 @@ import tensorflow_addons as _tfa
 ################################################ FUNCTIONS ################################################
 
 #DEF
-def getEMA( var ):
-	ema_var = _tf.train.ExponentialMovingAverage( 0.99 )
-	var_ = ema_var.apply( [var] )
-	var_av = ema_var.average( var )
-
-	return var_, var_av
-#ENDDEF
-
-#DEF
 def conv_layer( inp, f=4, k=1, s=1, upsample=False, activation=None, use_bias=False ):
 
 	# IF UPSAMPLING IS NEEDED
@@ -128,7 +119,7 @@ def conv_layer_resample_v1( inp, filters, ksize, stride, upsample=False, norm='b
 #ENDDEF
 
 #DEF
-def UNetBlock_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
+def unet_block_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 
 	conv1 = conv_layer_resample_v1( inp=inp_layer, \
 						filters=filters, \
@@ -151,7 +142,7 @@ def UNetBlock_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 #ENDDEF
 
 #DEF
-def ResUnit_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
+def res_unit_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 
 	# convolution layer with f/4 filters of size 1x1
 	conv1 = conv_layer( inp_layer, f=filters, k=ksize, s=1, upsample=False )
@@ -180,7 +171,7 @@ def ResUnit_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 #ENDDEF
 
 #DEF
-def ResNetUnit_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
+def resnet_unit_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 
 	# convolution layer with f/2 filters of size 1x1
 	conv1 = conv_layer( inp_layer, f=filters/2, k=1, s=1, upsample=False )
@@ -218,7 +209,7 @@ def ResNetUnit_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 #ENDDEF
 
 #DEF
-def ResInc_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
+def resinc_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
@@ -270,7 +261,7 @@ def ResInc_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 
 
 #DEF
-def ResNetInc_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
+def resnetinc_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### First 3x3 convolution layer
 	conv = conv_layer_resample_v1( inp=inp_layer, filters=filters, ksize=ksize, stride=1, \
@@ -325,7 +316,7 @@ def ResNetInc_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 #ENDDEF
 
 #DEF
-def ResInc_f2_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
+def resinc_f2_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
@@ -376,7 +367,7 @@ def ResInc_f2_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 #ENDDEF
 
 #DEF
-def ResInc_f2x3_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
+def resinc_f2x3_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
@@ -418,7 +409,7 @@ def ResInc_f2x3_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 
 
 #DEF
-def ResInc_f4x4_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
+def resinc_f4x4_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
@@ -470,7 +461,7 @@ def ResInc_f4x4_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 
 
 #DEF
-def ResInc_x3_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
+def resinc_x3_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 2
 	conv2 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
@@ -520,7 +511,7 @@ def ResInc_x3_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 
 
 #DEF
-def Inc_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
+def inc_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/4, ksize=1, stride=1, \
@@ -568,7 +559,7 @@ def Inc_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 #ENDDEF
 
 #DEF
-def Inc_f2_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
+def inc_f2_v1( inp_layer, filters=64, ksize=3, norm='batch' ):
 	
 	### Branch 1
 	conv1 = conv_layer_resample_v1( inp=inp_layer, filters=filters/2, ksize=1, stride=1, \
