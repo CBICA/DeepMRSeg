@@ -146,7 +146,7 @@ class LoadModel():
 #DEF
 def extract_data_for_subject( otherImg=None,refImg=None,ressize=1, \
 			orient='LPS', xy_width=320, rescalemethod='minmax' ):
-	
+
 	### Load images
 	ref,_ = load_res_norm( refImg,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )
 	others =[]

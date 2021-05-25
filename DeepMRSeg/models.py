@@ -27,14 +27,13 @@ def create_model( 	num_classes=2, \
 	#### INPUT LAYER ####
 	#####################
 	print("\n")
-		
-				
+
 #	# Defining placeholders
 	img_slice = _tf.keras.Input( dtype=_tf.float32, \
 					shape=[None,None,num_modalities], \
 					name="img_slice" )
 	print(img_slice)
-		
+
 	#####################
 	##### MAKE UNET #####
 	#####################

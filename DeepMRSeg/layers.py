@@ -86,7 +86,7 @@ def get_onehot( y,ls,xy,c ):
 							stddev=ls/2, \
 							dtype=_tf.float32 ) \
 					)
-		
+
 		return ( oh * (1 - rls) + 0.5 * rls )
 
 	else:
