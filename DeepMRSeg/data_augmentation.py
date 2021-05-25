@@ -87,7 +87,7 @@ def perturb_images( img,lab ):
 							stddev=randnoisestd, \
 							dtype=_tf.float32 ) ), \
 			lambda: img );
-	
+
 #	# add random gamma
 #	randcond  = _tf.random.uniform( [], 0, 2, dtype=_tf.int32 )
 #	randgamma = _tf.random.uniform( [], 0.9, 1.1, dtype=_tf.float32 )
@@ -121,7 +121,7 @@ def data_reader( filenames,reader_func,batch_size,mode ):
 
 	# Read TFRecords
 	ds = ds.map( map_func=reader_func, num_parallel_calls=_tf.data.experimental.AUTOTUNE )
-	print(ds)		
+	print(ds)
 
 	# Shuffle extracted data
 	if mode == _tf.estimator.ModeKeys.TRAIN:

@@ -146,7 +146,7 @@ class LoadModel():
 #DEF
 def extract_data_for_subject( otherImg=None,refImg=None,ressize=1, \
 			orient='LPS', xy_width=320, rescalemethod='minmax' ):
-	
+
 	### Load images
 	ref,_ = load_res_norm( refImg,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )
 	others =[]
@@ -202,7 +202,8 @@ def run_model( im_dat, num_classes, allmodels, bs ):
 	# ENDFOR EACH MODEL
 
 	### Reshuffle predictions from [z,x,y,c,m] -> [x,y,z,c,m]
-	ens = _np.moveaxis( val_prob,0,2 ).astype('float32').mean( axis=-1 )
+#	ens = _np.moveaxis( val_prob,0,2 ).astype('float32').mean( axis=-1 )
+	ens = _np.moveaxis( val_prob,0,2 ).mean( axis=-1 ).astype('float32')
 	del val_prob, im_dat_ds
 
 	return ens
@@ -216,7 +217,7 @@ def resample_ens( inImg,inImg_res_F,ens,ens_ref,c ):
 	import nibabel.processing as _nibp
 
 	ens_f = _nib.Nifti1Image( ens[ :,:,:,c ], inImg_res_F.affine, inImg_res_F.header )
-	ens_f_res = _nibp.resample_from_to( ens_f, inImg, order=1 ) #order=0 seems to produce the same results
+	ens_f_res = _nibp.resample_from_to( ens_f, inImg, order=0 ) #order=1 seems to produce the same results
 	ens_ref[ :,:,:,c ] = ens_f_res.get_data()
 
 	del ens_f, ens_f_res

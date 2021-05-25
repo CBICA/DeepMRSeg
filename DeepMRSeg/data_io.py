@@ -64,10 +64,10 @@ def load_res_norm( in_path,xy_width,ressize,orient='LPS',mask=0,rescalemethod='m
 	
 	### Load image if it is a file path
 	#IF
-	if _os.path.isfile(in_path):
+	if isinstance( in_path,str ):
 		FileRead = _nib.load( in_path )
 	### Else, verify if it is a nibabel object with a header
-	else:
+	elif isinstance( in_path,_nib.Nifti1Image ):
 		assert in_path.header
 		FileRead = in_path
 	#ENDIF

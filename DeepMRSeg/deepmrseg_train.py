@@ -211,7 +211,7 @@ class Train(object):
 		self.mdlDir = FLAGS.mdlDir
 		self.max_to_keep = FLAGS.max_to_keep
 		self.summary = FLAGS.summary
-		
+
 		### Define Metrics
 		self.iou_train = _tf.keras.metrics.MeanIoU( num_classes=self.num_classes )
 		self.iou_val = _tf.keras.metrics.MeanIoU( num_classes=self.num_classes )

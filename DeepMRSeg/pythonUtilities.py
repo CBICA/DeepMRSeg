@@ -26,7 +26,7 @@ def check_file(checkFileIP):
 ### Get File Attributes
 #DEF
 def file_att(FileAttIP):
-	
+
 	ACCEPTED_FILE_TYPES = [ 'nii.gz', 'hdr', 'img', 'nii' ]
 
 	if any( [FileAttIP.endswith(x) for x in ACCEPTED_FILE_TYPES] ):

@@ -88,7 +88,7 @@ def preprocessImage( T1Img=None, FLImg=None, dest=None, n_jobs=4, verbose=0, cos
 
 		if verbose == 1:
 			print(out)
-	       
+
 	except:
 		print("\nERROR! Execution of this command failed: \n", cmd)
 		print(err)
