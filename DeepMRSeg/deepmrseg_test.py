@@ -469,9 +469,9 @@ def _main():
 	#ENDWITH
 	print("")
 	_sys.stdout.flush()
-	
+
 	### Encode indices to ROIs if provided
-	roi_indices = get_roi_indices( roicsv=FLAGS.roi )	
+	roi_indices = get_roi_indices( roicsv=FLAGS.roi )
 
 	### Predict
 	print("\n----> Running predictions for all subjects in the FileList")
