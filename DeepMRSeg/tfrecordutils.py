@@ -17,7 +17,7 @@ def _bytes_feature(value):
 	return _tf.train.Feature(bytes_list=_tf.train.BytesList(value=[value]))
 #ENDDEF
 
-#DEF			
+#DEF
 def tfrecordwriter( rname, rfeats, rlabels, feats_dtype, labels_dtype ):
 
 	# open the TFRecords file
@@ -35,7 +35,7 @@ def tfrecordwriter( rname, rfeats, rlabels, feats_dtype, labels_dtype ):
 
 		# Create an example protocol buffer
 		example = _tf.train.Example( features=_tf.train.Features(feature=feature) )
-        
+
 		# Serialize to string and write on the file
 		writer.write( example.SerializeToString() )
       

@@ -12,7 +12,7 @@ import platform as _platform
 
 from . import pythonUtilities
 
-from .data_io import loadrespadsave
+from .data_io import load_res_norm
 
 ################################################ FUNCTIONS ################################################
 
@@ -122,15 +122,14 @@ class LoadModel():
 
 	# DEF
 	def __init__( self, checkpoint ):
-		"""
-		LoadModel class constructor to load models from checkpoints.
+		"""LoadModel class constructor to load models from checkpoints.
 
 		Args:
 			checkpoint: path to checkpoint
 		"""
 		self.model = _tf.keras.models.load_model(checkpoint)
 	# ENDDEF
-		
+
 	# DEF
 	def run( self, im_slice ):
 		"""Running the activation operation previously imported.
@@ -145,14 +144,14 @@ class LoadModel():
 #ENDCLASS
 
 #DEF
-def extractDataForSubject( otherImg=None,refImg=None,ressize=1, \
+def extract_data_for_subject( otherImg=None,refImg=None,ressize=1, \
 			orient='LPS', xy_width=320, rescalemethod='minmax' ):
-	
+
 	### Load images
-	ref,_ = loadrespadsave( refImg,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )
+	ref,_ = load_res_norm( refImg,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )
 	others =[]
 	for img in otherImg:
-		others.extend( [ loadrespadsave( img,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )[0] ] )
+		others.extend( [ load_res_norm( img,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )[0] ] )
 	
 	### Restructure matrices from [x,y,z] to [z,x,y]
 	ref = _np.moveaxis( ref,2,0 )
@@ -182,7 +181,7 @@ def load_model( models,cp ):
 #ENDDEF
 
 #DEF
-def runModel( im_dat, num_classes, allmodels, bs ):
+def run_model( im_dat, num_classes, allmodels, bs ):
 
 	### Create array to store output probabilities
 	val_prob = _np.zeros( ( im_dat.shape[0:3] + (num_classes,len(allmodels)) ) )
@@ -192,18 +191,19 @@ def runModel( im_dat, num_classes, allmodels, bs ):
 
 	# Launch testing
 	# FOR EACH MODEL
-	for c in range( len(allmodels) ):
+	for c,mod in enumerate( allmodels ):
 		i = 0
 		# FOR EACH BATCH OF SLICES
 		for one_batch in im_dat_ds:
 			bs = one_batch.shape[0]
-			val_prob[i:i+bs,:,:,:,c] = allmodels[c].run( one_batch )
+			val_prob[i:i+bs,:,:,:,c] = mod.run( one_batch )
 			i += bs
 		# ENDFOR EACH BATCH OF SLICES
 	# ENDFOR EACH MODEL
 
 	### Reshuffle predictions from [z,x,y,c,m] -> [x,y,z,c,m]
-	ens = _np.moveaxis( val_prob,0,2 ).astype('float32').mean( axis=-1 )
+#	ens = _np.moveaxis( val_prob,0,2 ).astype('float32').mean( axis=-1 )
+	ens = _np.moveaxis( val_prob,0,2 ).mean( axis=-1 ).astype('float32')
 	del val_prob, im_dat_ds
 
 	return ens
@@ -217,7 +217,7 @@ def resample_ens( inImg,inImg_res_F,ens,ens_ref,c ):
 	import nibabel.processing as _nibp
 
 	ens_f = _nib.Nifti1Image( ens[ :,:,:,c ], inImg_res_F.affine, inImg_res_F.header )
-	ens_f_res = _nibp.resample_from_to( ens_f, inImg, order=1 ) #order=0 seems to produce the same results
+	ens_f_res = _nibp.resample_from_to( ens_f, inImg, order=0 ) #order=1 seems to produce the same results
 	ens_ref[ :,:,:,c ] = ens_f_res.get_data()
 
 	del ens_f, ens_f_res
@@ -238,7 +238,7 @@ def save_output_probs( ens_ref,ind,roi,inImg,out ):
 #ENDDEF
 
 #DEF
-def saveOutput( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
+def save_output( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
 			rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320, nJobs=1 ):
 
 	### Import more modules
@@ -249,7 +249,7 @@ def saveOutput( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
 	inImg = _nib.load( refImg )
 	
 	### Resample refImg
-	_,inImg_res_F = loadrespadsave( in_path=refImg, \
+	_,inImg_res_F = load_res_norm( in_path=refImg, \
 					xy_width=xy_width, \
 					ressize=ressize, \
 					orient=orient, \
@@ -309,10 +309,10 @@ def saveOutput( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
 #ENDDEF
 
 #DEF
-def predictClasses( refImg, otherImg, num_classes, allmodels, roi_indices, out=None, probs=False, \
+def predict_classes( refImg, otherImg, num_classes, allmodels, roi_indices, out=None, probs=False, \
 			rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320, batch_size=64, nJobs=1 ):
 
-	im_dat = extractDataForSubject( \
+	im_dat = extract_data_for_subject( \
 			otherImg=otherImg, \
 			refImg=refImg, \
 			ressize=ressize, \
@@ -320,15 +320,15 @@ def predictClasses( refImg, otherImg, num_classes, allmodels, roi_indices, out=N
 			xy_width=xy_width, \
 			rescalemethod=rescalemethod )
 
-	ens = runModel( im_dat=im_dat, num_classes=num_classes, \
+	ens = run_model( im_dat=im_dat, num_classes=num_classes, \
 			allmodels=allmodels, bs=batch_size )
 
 	#IF OUTFILE PROVIDED
 	if out:
-		saveOutput( ens, refImg, num_classes, roi_indices, out=out, probs=probs, \
+		save_output( ens, refImg, num_classes, roi_indices, out=out, probs=probs, \
 			rescalemethod=rescalemethod, ressize=ressize, orient=orient, xy_width=xy_width, nJobs=nJobs )
 	else:
-		return saveOutput( ens, refImg, num_classes, roi_indices, out=out, probs=probs, \
+		return save_output( ens, refImg, num_classes, roi_indices, out=out, probs=probs, \
 			rescalemethod=rescalemethod, ressize=ressize, orient=orient, xy_width=xy_width, nJobs=nJobs )
 	#ENDIF OUTFILE PROVIDED
 #ENDDEF
@@ -383,7 +383,7 @@ def _main():
 	# Check if input files provided exist
 	# FOR
 	for f in FLAGS.sList, FLAGS.roi:
-		pythonUtilities.checkFile( f )
+		pythonUtilities.check_file( f )
 	# ENDFOR
 	
 	# Check if xy_width matches the depth
@@ -485,76 +485,56 @@ def _main():
 	print("\n----> Running predictions for all subjects in the FileList")
 	_sys.stdout.flush()
 
-	#WITH TPE
-	with _TPE( max_workers=nJobs ) as executor:
-	
-		#WITH OPENFILE
-		with open(FLAGS.sList) as f:
-			reader = _csv.DictReader( f )
+	#WITH OPENFILE
+	with open(FLAGS.sList) as f:
+		reader = _csv.DictReader( f )
 
-			#FOR
-			for row in reader:
+		#FOR
+		for row in reader:
 
-				### Get image filenames
-				refImg = row[FLAGS.refMod]
-				outImg = row[FLAGS.outCol]
+			### Get image filenames
+			refImg = row[FLAGS.refMod]
+			outImg = row[FLAGS.outCol]
 
-				# Get files for other modalities
-				otherModsFileList = []
-				#IF
-				if otherMods:
-					#FOR
-					for mod in otherMods:
-						otherModsFileList.extend( [ row[mod] ] )
-					#ENDFOR
-				#ENDIF
-			
-				### Create output directory if it doesn't exist already
-				#IF
-				if not _os.path.isdir( _os.path.dirname(outImg) ):
-					_os.makedirs( _os.path.dirname(outImg) )
-				#ENDIF
+			# Get files for other modalities
+			otherModsFileList = []
+			#IF
+			if otherMods:
+				#FOR
+				for mod in otherMods:
+					otherModsFileList.extend( [ row[mod] ] )
+				#ENDFOR
+			#ENDIF
+		
+			### Create output directory if it doesn't exist already
+			#IF
+			if not _os.path.isdir( _os.path.dirname(outImg) ):
+				_os.makedirs( _os.path.dirname(outImg) )
+			#ENDIF
 
-				### Check if the file exists already
-				#IF
-				if not _os.path.isfile( outImg ):
-					print( "\t---->	%s" % ( row[FLAGS.idCol] ) )
-					_sys.stdout.flush()
-			
-#					executor.submit( predictClasses, \
-#							refImg=refImg, \
-#							otherImg=otherModsFileList, \
-#							num_classes=FLAGS.num_classes, \
-#							allmodels=allmodels, \
-#							roi_indices=roi_indices, \
-#							out=outImg, \
-#							probs=FLAGS.probs, \
-#							rescalemethod=FLAGS.rescale, \
-#							ressize=FLAGS.ressize, \
-#							orient=FLAGS.reorient, \
-#							xy_width=FLAGS.xy_width, \
-#							batch_size=FLAGS.batch, \
-#							nJobs=nJobs )
-					predictClasses( \
-							refImg=refImg, \
-							otherImg=otherModsFileList, \
-							num_classes=FLAGS.num_classes, \
-							allmodels=allmodels, \
-							roi_indices=roi_indices, \
-							out=outImg, \
-							probs=FLAGS.probs, \
-							rescalemethod=FLAGS.rescale, \
-							ressize=FLAGS.ressize, \
-							orient=FLAGS.reorient, \
-							xy_width=FLAGS.xy_width, \
-							batch_size=FLAGS.batch, \
-							nJobs=nJobs )
-						
-					_time.sleep( FLAGS.delay )
-				#ENDIF
-			#ENDFOR
-		#ENDWITH OPENFILE
-	#ENDWITH TPE
+			### Check if the file exists already
+			#IF
+			if not _os.path.isfile( outImg ):
+				print( "\t---->	%s" % ( row[FLAGS.idCol] ) )
+				_sys.stdout.flush()
+		
+				predict_classes( \
+						refImg=refImg, \
+						otherImg=otherModsFileList, \
+						num_classes=FLAGS.num_classes, \
+						allmodels=allmodels, \
+						roi_indices=roi_indices, \
+						out=outImg, \
+						probs=FLAGS.probs, \
+						rescalemethod=FLAGS.rescale, \
+						ressize=FLAGS.ressize, \
+						orient=FLAGS.reorient, \
+						xy_width=FLAGS.xy_width, \
+						batch_size=FLAGS.batch, \
+						nJobs=nJobs )
+			#ENDIF
+		#ENDFOR
+	#ENDWITH OPENFILE
 
 	### Print resouce usage
 	print("\nResource usage for this process")
