@@ -13,6 +13,7 @@ import platform as _platform
 from . import pythonUtilities
 
 from .data_io import load_res_norm
+from .utils import get_roi_indices
 
 ################################################ FUNCTIONS ################################################
 
