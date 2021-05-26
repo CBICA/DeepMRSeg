@@ -152,7 +152,7 @@ def extract_data_for_subject( otherImg=None,refImg=None,ressize=1, \
 	others =[]
 	for img in otherImg:
 		others.extend( [ load_res_norm( img,xy_width,ressize,orient,mask=0,rescalemethod=rescalemethod )[0] ] )
-	
+
 	### Restructure matrices from [x,y,z] to [z,x,y]
 	ref = _np.moveaxis( ref,2,0 )
 	for m in range( len(otherImg) ):
@@ -245,8 +245,15 @@ def save_output( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
 	import nibabel as _nib
 	from concurrent.futures import ThreadPoolExecutor as _TPE
 
-	### Read reference image
-	inImg = _nib.load( refImg )
+	### Load reference image if it is a file path
+	#IF
+	if isinstance( refImg,str ):
+		inImg = _nib.load( refImg )
+	### Else, verify if it is a nibabel object with a header
+	elif isinstance( refImg,_nib.Nifti1Image ):
+		assert refImg.header
+		inImg = refImg
+	#ENDIF
 	
 	### Resample refImg
 	_,inImg_res_F = load_res_norm( in_path=refImg, \

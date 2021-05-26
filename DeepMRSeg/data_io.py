@@ -3,7 +3,6 @@
 __author__ 	= 'Jimit Doshi'
 __EXEC_NAME__ 	= "data_io"
 
-import os as _os
 import numpy as _np
 
 from . import rescaleimages
@@ -34,11 +33,11 @@ def check_files( refImg=None, otherImg=None, labImg=None ):
 	if otherImg:
 		for m in range( len(otherImg) ):
 			others.extend( [ _nib.load( otherImg[m] ) ] )
-	
+
 	### Check if they have the same dimensions
 	if labImg:
 		assert lab.shape == ref.shape, "Shape misatch between %s and %s images" % ( labImg,refImg )
-	
+
 	if otherImg:
 		for m in range( len(otherImg) ):
 			assert others[m].shape == ref.shape, "Shape misatch between %s and %s images" % ( otherImg[m],refImg )
@@ -47,12 +46,12 @@ def check_files( refImg=None, otherImg=None, labImg=None ):
 	if labImg:
 		assert ( _np.round(lab.header.get_base_affine(),4) == _np.round(ref.header.get_base_affine(),4) ).all(), \
 						"Affine matrix misatch between %s and %s" % ( labImg,refImg )
-	
+
 	if otherImg:
 		for m in range( len(otherImg) ):
 			assert ( _np.round(others[m].header.get_base_affine(),4) == _np.round(ref.header.get_base_affine(),4) ).all(), \
 						"Affine matrix misatch between %s and %s" % ( otherImg[m],refImg )
-					
+
 #ENDDEF
 
 #DEF
