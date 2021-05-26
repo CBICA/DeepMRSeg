@@ -470,23 +470,7 @@ def _main():
 	_sys.stdout.flush()
 	
 	### Encode indices to ROIs if provided
-	roi_indices = []
-	#IF
-	if FLAGS.roi:
-		#WITH
-		with open(FLAGS.roi) as roicsvfile:
-			roi_reader = _csv.DictReader( roicsvfile )
-
-			#FOR
-			for roi_row in roi_reader:
-				roi_indices.extend( [ [int(roi_row['Index']), int(roi_row['ROI'])] ] )
-			#ENDFOR
-		#ENDWITH
-	else:
-		for i in range( FLAGS.num_classes ):
-			roi_indices.extend( [ [i,i] ] )
-	#ENDIF
-	
+	roi_indices = get_roi_indices( roicsv=FLAGS.roi )	
 
 	### Predict
 	print("\n----> Running predictions for all subjects in the FileList")

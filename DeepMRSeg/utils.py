@@ -8,6 +8,7 @@ import matplotlib.pyplot as _plt
 import numpy as _np
 import io as _io
 import itertools as _itertools
+import csv as _csv
 
 ################################################ FUNCTIONS ################################################
 
@@ -77,4 +78,27 @@ def plot_to_image(figure):
 	image = _tf.expand_dims(image, 0)
 
 	return image
+#ENDDEF
+
+#DEF
+def get_roi_indices( roicsv=None, num_classes=2 ):
+	### Encode indices to ROIs if provided
+	roi_indices = []
+	#IF
+	if roicsv:
+		#WITH
+		with open(roicsv) as roicsvfile:
+			roi_reader = _csv.DictReader( roicsvfile )
+
+			#FOR
+			for roi_row in roi_reader:
+				roi_indices.extend( [ [int(roi_row['Index']), int(roi_row['ROI'])] ] )
+			#ENDFOR
+		#ENDWITH
+	else:
+		for i in range( num_classes ):
+			roi_indices.extend( [ [i,i] ] )
+	#ENDIF
+
+	return roi_indices
 #ENDDEF
