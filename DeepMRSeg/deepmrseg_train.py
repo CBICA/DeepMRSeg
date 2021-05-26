@@ -221,7 +221,7 @@ class Train(object):
 		self.epoch_train_ioul_avg = _tf.keras.metrics.Mean()
 		self.epoch_train_mael_avg = _tf.keras.metrics.Mean()
 		self.epoch_train_bcel_avg = _tf.keras.metrics.Mean()
-		
+
 		self.epoch_val_loss_avg = _tf.keras.metrics.Mean()
 		self.epoch_val_ioul_avg = _tf.keras.metrics.Mean()
 		self.epoch_val_mael_avg = _tf.keras.metrics.Mean()
