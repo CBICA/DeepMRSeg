@@ -713,9 +713,8 @@ def _main():
 		_os.makedirs( FLAGS.mdlDir )
 
 	### Create a config file containing training parameters
-	train_config = {}
 	# dump to json file
-	train_config_json = _json.dumps( train_config,sort_keys=True,indent=4 )
+	train_config_json = _json.dumps( FLAGS,sort_keys=True,indent=4 )
 	#WITH
 	with open( _os.path.join( FLAGS.mdlDir + '/train_config.json' ), "w" ) as outfile:
 		outfile.write( train_config_json )
