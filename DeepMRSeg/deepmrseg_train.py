@@ -6,6 +6,7 @@ __EXEC_NAME__	 = "deepmrseg_train"
 
 import os as _os
 import sys as _sys
+import json as _json
 import time as _time
 import signal as _signal
 import tensorflow as _tf
@@ -36,10 +37,19 @@ def read_flags():
 
 	parser = _argparse.ArgumentParser( formatter_class=_argparse.ArgumentDefaultsHelpFormatter )
 
+#	CONFIG FILE
+#	===========
+	configArgs = parser.add_argument_group( 'CONFIG FILE' )
+	configArgs.add_argument( "--config", default=None, type=str, \
+				help="absolute path to the config file containing the parameters in a JSON format")
+
+	# Only parse for "--config"
+	configarg,_ = parser.parse_known_args()
+
 #	INPUT LIST
 #	==========
 	inputArgs = parser.add_argument_group( 'REQUIRED INPUT ARGS' )
-	inputArgs.add_argument( "--sList", default=None, type=str, \
+	inputArgs.add_argument( "--sList", default=None, type=str, required=True, \
 				help="absolute path to the subject list for training")
 	inputArgs.add_argument( "--idCol", default=None, type=str, \
 				help="id column name (e.g.: 'ID')" )
@@ -98,7 +108,7 @@ def read_flags():
 					 choose from { 'Adam', 'RMSProp', 'SGD', 'Momentum' }")
 	trainArgs.add_argument( "--learning_rate", default=0.05, type=float, \
 				help="initial learning rate to be used" )
-	trainArgs.add_argument( "--LR_sch", default='EXP', type=str, \
+	trainArgs.add_argument( "--lr_sch", default='EXP', type=str, \
 				help="learning rate schedule \
 					choose from { EXP, PLAT }" )
 	trainArgs.add_argument( "--decay", default=0.9, type=float, \
@@ -142,7 +152,19 @@ def read_flags():
 
 #	FLAGS
 #	=====
+	### Read config file first, if provided
+	if configarg.config:
+		# Read the JSON config file
+		with open(configarg.config) as f:
+			configflags = _json.load(f)
+
+		# Set args from the config file as defaults
+		parser.set_defaults( **configflags )
+
+	### Read remaining args from CLI and overwrite the defaults
 	flags = parser.parse_args()
+
+	### Return flags and parser
 	return flags, parser
 
 #ENDDEF ARGPARSER
@@ -199,7 +221,7 @@ class Train(object):
 		self.batch_size = FLAGS.batch
 		self.learning_rate = FLAGS.learning_rate
 		self.decay = FLAGS.decay
-		self.lr_sch = FLAGS.LR_sch
+		self.lr_sch = FLAGS.lr_sch
 		self.patience = FLAGS.patience
 		self.gamma = FLAGS.gamma
 		self.alpha = FLAGS.alpha
@@ -671,7 +693,7 @@ def _main():
 	print("Min Epochs \t: %d" % (FLAGS.min_epochs))
 	print("Init Optimizer \t: %s" % (FLAGS.optimizer))
 	print("Learning Rate \t: %s" % (FLAGS.learning_rate))
-	print("LR Schedule \t: %s" % (FLAGS.LR_sch))
+	print("LR Schedule \t: %s" % (FLAGS.lr_sch))
 	print("Decay Factor \t: %s" % (FLAGS.decay))
 	print("Loss Weight \t: %s" % (FLAGS.alpha))
 	print("Gamma Factor \t: %s" % (FLAGS.gamma))
@@ -686,18 +708,32 @@ def _main():
 	print("Patience Param \t: %d" % (FLAGS.patience))
 	print("Normalization \t: %s\n" % (FLAGS.norm))
 
-	# create model dir
+	### Create model dir
 	if not _os.path.isdir( FLAGS.mdlDir ):
 		_os.makedirs( FLAGS.mdlDir )
+
+	### Create a config file for testing
+	test_config = {}
+	#FOR KEYS
+	for k in [ 'num_classes', 'reorient', 'rescale', 'ressize', 'roi', 'xy_width' ]:
+		test_config[k] = FLAGS.__dict__[k]
+	#ENDFOR KEYS
+	
+	# dump to json file
+	test_config_json = _json.dumps( test_config,sort_keys=True,indent=4 )
+	#WITH
+	with open( _os.path.join( FLAGS.mdlDir + '/test.cfg' ), "w" ) as outfile:
+		outfile.write( test_config_json )
+	#ENDWITH
+
+	### Read subject list file
+	print("Reading the input subject list and running sanity checks on the files")
+	_sys.stdout.flush()
 
 	# create training and validation subject lists
 	train_sublist = []
 	val_sublist = []
 	all_sublist = []
-
-	### Read subject list file
-	print("Reading the input subject list and running sanity checks on the files")
-	_sys.stdout.flush()
 
 	### Multi-thread the loading of images
 	#WITH
