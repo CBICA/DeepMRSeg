@@ -722,7 +722,7 @@ def _main():
 	# dump to json file
 	test_config_json = _json.dumps( test_config,sort_keys=True,indent=4 )
 	#WITH
-	with open( _os.path.join( FLAGS.mdlDir + '/test.cfg' ), "w" ) as outfile:
+	with open( _os.path.join( FLAGS.mdlDir + '/test_config.json' ), "w" ) as outfile:
 		outfile.write( test_config_json )
 	#ENDWITH
 
