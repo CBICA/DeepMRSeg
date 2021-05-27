@@ -6,15 +6,15 @@ DeepMRSeg is a Python-based package for processing and analysis of MRI images. T
 
 DeepMRSeg aims to provide users a ***robust*** and ***accurate*** toolset for performing common image processing tasks in neuroimaging. In order to be able to meet these challenges DeepMRSeg uses a modified UNet architecture that combines an ensemble of learners. A second major feature of DeepMRSeg is the set of pre-trained models provided for various tasks. Importantly, we applied intensive model training using very large and diverse MRI datasets with carefully verified ground-truth labels.  
 
-## Usage:
+## Usage
 
 Please see the user manual
 
-## License:
+## License
 
 ## How to cite DeepMRSeg:
 
-## Publications:
+## Publications
 
 ## Authors and Contributors
 
@@ -22,7 +22,7 @@ The DeepMRSeg package is currently developed and maintained by:
 
 Others who contributed to the project are:
 
-## Grant support:
+## Grant support
 
 Development of the DeepMRSeg package is supported by the following grants:
 
