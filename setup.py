@@ -25,12 +25,10 @@ setuptools.setup(
 	'h5py==2.10.0',
 	'hyperopt',
 	'keras',
-#	'pandas',
 	'numpy',
 	'protobuf',
 	'pymongo',
 	'scikit-learn',
-#	'seaborn',
 	'scipy==1.4.1',
 	'nibabel',
 	'resource'
