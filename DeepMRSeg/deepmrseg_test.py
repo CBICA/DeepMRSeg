@@ -187,15 +187,16 @@ def extract_data_for_subject( otherImg=None,refImg=None,ressize=1, \
 		others[m] = others[m].reshape( ( others[m].shape+(1,) ) )
 
 	### Return appended T1 and FL and the wml
+	#IF
 	if len(otherImg) > 0:
 		allMods = ref.copy()
 		for m in range( len(otherImg) ):
 			allMods = _np.append( allMods,others[m],axis=3 )
-		
+
 		return allMods
 	else:
 		return ref
-	
+	#ENDIF
 #ENDDEF
 
 #DEF
