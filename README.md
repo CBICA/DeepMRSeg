@@ -12,7 +12,7 @@ Please see the user manual
 
 ## License
 
-## How to cite DeepMRSeg:
+## How to cite DeepMRSeg
 
 ## Publications
 
