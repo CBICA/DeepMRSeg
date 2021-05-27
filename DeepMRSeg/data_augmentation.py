@@ -101,7 +101,7 @@ def perturb_images( img,lab ):
 #	img = _tf.cond( randcond>0, \
 #			lambda: _tfa.image.sharpness( img, randnoisestd ), \
 #			lambda: img );
-	
+
 	return img,lab
 
 #ENDDEF
