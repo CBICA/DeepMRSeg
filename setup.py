@@ -18,6 +18,7 @@ setuptools.setup(
     url="https://github.com/CBICA/DeepMRSeg",
     packages=setuptools.find_packages(),
 	install_requires=[
+	'scipy',
 	'matplotlib',
 	'tensorflow~=2.3.2',
 	'tensorflow-addons',
@@ -31,7 +32,6 @@ setuptools.setup(
 	'pymongo',
 	'scikit-learn',
 #	'seaborn',
-	'scipy',
 	'nibabel',
 	'resource'
 	],
