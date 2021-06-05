@@ -31,7 +31,7 @@ setuptools.setup(
 	'pymongo',
 	'scikit-learn',
 #	'seaborn',
-	'scipy==1.4.1',
+	'scipy',
 	'nibabel',
 	'resource'
 	],
