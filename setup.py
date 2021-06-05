@@ -26,7 +26,7 @@ setuptools.setup(
 	'hyperopt',
 	'keras',
 #	'pandas',
-	'numpy',
+	'numpy~=1.18.4',
 	'protobuf',
 	'pymongo',
 	'scikit-learn',
