@@ -18,7 +18,7 @@ setuptools.setup(
     url="https://github.com/CBICA/DeepMRSeg",
     packages=setuptools.find_packages(),
 	install_requires=[
-	'scipy',
+	'scipy==1.5.4',
 	'matplotlib',
 	'tensorflow~=2.3.2',
 	'tensorflow-addons',
