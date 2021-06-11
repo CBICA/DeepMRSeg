@@ -33,7 +33,7 @@ setuptools.setup(
 	'scikit-learn',
 #	'seaborn',
 	'nibabel',
-	'resource'
+	'resource',
 	'networkx==2.5.1'
 	],
 	entry_points = {
