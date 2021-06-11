@@ -34,6 +34,7 @@ setuptools.setup(
 #	'seaborn',
 	'nibabel',
 	'resource'
+	'networkx==2.5.1'
 	],
 	entry_points = {
     'console_scripts': ['deepmrseg_train=DeepMRSeg.deepmrseg_train:_main',
