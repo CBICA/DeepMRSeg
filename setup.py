@@ -18,20 +18,21 @@ setuptools.setup(
     url="https://github.com/CBICA/DeepMRSeg",
     packages=setuptools.find_packages(),
 	install_requires=[
-	'matplotlib',
+	'scipy==1.5.4',
+	'matplotlib==3.3.3',
 	'tensorflow~=2.3.2',
 	'tensorflow-addons',
 	'dill',
 	'h5py==2.10.0',
 	'hyperopt',
 	'keras',
-	'numpy',
+	'numpy~=1.18.4',
 	'protobuf',
 	'pymongo',
 	'scikit-learn',
-	'scipy==1.4.1',
 	'nibabel',
-	'resource'
+	'resource',
+	'networkx==2.5.1'
 	],
 	entry_points = {
     'console_scripts': ['deepmrseg_train=DeepMRSeg.deepmrseg_train:_main',
