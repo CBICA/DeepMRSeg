@@ -11,8 +11,8 @@ These are the platforms we have tested. It may also work on other platforms.
 -   Windows 10 Enterprise x64
 
 ## Prerequisities
-- [Python 3](https://www.python.org/downloads/)
-- If you prefer conda, you may install it from [here](https://www.anaconda.com/products/individual)
+-   [Python 3](https://www.python.org/downloads/)
+-   If you prefer conda, you may install it from [here](https://www.anaconda.com/products/individual)
 
 ## Installation Instructions
 
@@ -24,7 +24,6 @@ python setup.py install
 ```
 
 ### Installation in conda environment
-
 ```
 conda create --name DeepMRSeg python=3.7.9
 conda activate DeepMRSeg
