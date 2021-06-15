@@ -5,6 +5,7 @@ __EXEC_NAME__	 = "deepmrseg_test"
 
 import os as _os
 import sys as _sys
+import json as _json
 
 import tensorflow as _tf
 import numpy as _np
@@ -27,6 +28,15 @@ def read_flags():
 	import argparse as _argparse
 
 	parser = _argparse.ArgumentParser( formatter_class=_argparse.ArgumentDefaultsHelpFormatter )
+
+#	CONFIG FILE
+#	===========
+	configArgs = parser.add_argument_group( 'CONFIG FILE' )
+	configArgs.add_argument( "--config", default=None, type=str, \
+				help="absolute path to the config file containing the parameters in a JSON format")
+
+	# Only parse for "--config"
+	configarg,_ = parser.parse_known_args()
 
 #	INPUT LIST
 #	==========
@@ -98,7 +108,19 @@ def read_flags():
 
 #	FLAGS
 #	=====
+	### Read config file first, if provided
+	if configarg.config:
+		# Read the JSON config file
+		with open(configarg.config) as f:
+			configflags = _json.load(f)
+
+		# Set args from the config file as defaults
+		parser.set_defaults( **configflags )
+
+	### Read remaining args from CLI and overwrite the defaults
 	flags = parser.parse_args()
+
+	### Return flags and parser
 	return flags, parser
 
 #ENDDEF ARGPARSER
@@ -165,15 +187,16 @@ def extract_data_for_subject( otherImg=None,refImg=None,ressize=1, \
 		others[m] = others[m].reshape( ( others[m].shape+(1,) ) )
 
 	### Return appended T1 and FL and the wml
+	#IF
 	if len(otherImg) > 0:
 		allMods = ref.copy()
 		for m in range( len(otherImg) ):
 			allMods = _np.append( allMods,others[m],axis=3 )
-		
+
 		return allMods
 	else:
 		return ref
-	
+	#ENDIF
 #ENDDEF
 
 #DEF
