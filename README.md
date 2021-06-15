@@ -16,14 +16,14 @@ These are the platforms we have tested. It may also work on other platforms.
 
 ## Installation Instructions
 
-### Direct installation at default location 
+### 1) Direct installation at default location 
 ```
 git clone  https://github.com/CBICA/DeepMRSeg.git
 cd DeepMRSeg
 python setup.py install
 ```
 
-### Installation in conda environment
+### 2) Installation in conda environment
 ```
 conda create --name DeepMRSeg python=3.7.9
 conda activate DeepMRSeg
