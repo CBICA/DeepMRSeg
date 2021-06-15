@@ -8,7 +8,7 @@ DeepMRSeg aims to provide users a ***robust*** and ***accurate*** toolset for pe
 
 ## Supported Platforms
 These are the platforms we have tested. It may also work on other platforms.
-- Windows 10 Enterprise x64
+-  Windows 10 Enterprise x64
 
 ## Prerequisities
 - [Python 3](https://www.python.org/downloads/)
