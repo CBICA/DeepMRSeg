@@ -8,7 +8,8 @@ DeepMRSeg aims to provide users a ***robust*** and ***accurate*** toolset for pe
 
 ## Supported Platforms
 These are the platforms we have tested. 
--   Windows 10 Enterprise x64
+-   Windows 10 x64
+-   Ubuntu 20.4 64 bit
 
 It may also work on other platforms.
 
@@ -33,6 +34,18 @@ conda activate DeepMRSeg
 Then follow steps from [direct installation](#direct-installation-at-default-location)
 
 ## Usage
+
+On the cmd prompt (or on Anaconda prompt) type
+
+For testing
+```bash
+deepmrseg_test
+```
+
+For Training
+```bash
+deepmrseg_train
+```
 
 Please see the user manual
 
