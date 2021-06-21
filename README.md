@@ -23,7 +23,7 @@ It may also work on other platforms.
 ```
 git clone  https://github.com/CBICA/DeepMRSeg.git
 cd DeepMRSeg
-python setup.py install
+python setup.py install #install DeepMRSeg and its dependencies
 ```
 
 ### 2) Installation in conda environment
@@ -47,7 +47,7 @@ For Training
 deepmrseg_train
 ```
 
-Please see the user manual
+Please see the user manual for more details.
 
 ## License
 
