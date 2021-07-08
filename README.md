@@ -8,7 +8,8 @@ DeepMRSeg aims to provide users a ***robust*** and ***accurate*** toolset for pe
 
 ## Supported Platforms
 These are the platforms we have tested. 
--   Windows 10 Enterprise x64
+-   Windows 10 x64
+-   Ubuntu 20.04 64 bit
 
 It may also work on other platforms.
 
@@ -22,7 +23,7 @@ It may also work on other platforms.
 ```
 git clone  https://github.com/CBICA/DeepMRSeg.git
 cd DeepMRSeg
-python setup.py install
+python setup.py install #install DeepMRSeg and its dependencies
 ```
 
 ### 2) Installation in conda environment
@@ -34,7 +35,19 @@ Then follow steps from [direct installation](#direct-installation-at-default-loc
 
 ## Usage
 
-Please see the user manual
+On the cmd prompt (or on Anaconda prompt) type
+
+For testing
+```bash
+deepmrseg_test
+```
+
+For Training
+```bash
+deepmrseg_train
+```
+
+Please see the user manual for more details.
 
 ## License
 
