@@ -2,11 +2,14 @@
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/abb2c20d73ed464180494bf2fed3f0eb)](https://app.codacy.com/gh/CBICA/DeepMRSeg?utm_source=github.com&utm_medium=referral&utm_content=CBICA/DeepMRSeg&utm_campaign=Badge_Grade_Settings)
 
-DeepMRSeg is a Python-based package for processing and analysis of MRI images. The package is developed and maintained by the [Center for Biomedical Image Computing and Analytics (CBICA)](https://www.cbica.upenn.edu/) at the University of Pennsylvania. As the name implies, main modules of DeepMRSeg are built upon Deep Learning models that perform a set of image segmentation steps on initial scans.
+DeepMRSeg is a Python-based package for MRI image segmentation. The package is developed and maintained by the [Center for Biomedical Image Computing and Analytics (CBICA)](https://www.cbica.upenn.edu/) at the University of Pennsylvania. As the name implies, main modules of DeepMRSeg are built upon Deep Learning models that perform a set of image segmentation steps on MRI scans.
 
-DeepMRSeg aims to provide users a ***robust*** and ***accurate*** toolset for performing common image processing tasks in neuroimaging. In order to be able to meet these challenges DeepMRSeg uses a modified UNet architecture that combines an ensemble of learners _[1]_.
+DeepMRSeg aims to provide users a ***robust***, ***accurate*** and ***user-friendly*** toolset for performing common segmentation tasks in neuroimaging. In order to meet these challenges, the development of DeepMRSeg was guided by following set of fundamental principles:
 
-A second major feature of DeepMRSeg is a set of pre-trained models provided for various tasks. Importantly, we applied intensive model training using very large and diverse MRI datasets with carefully verified ground-truth labels.
+* ***Efficient network architecture:*** DeepMRSeg uses a modified UNet architecture that combines an ensemble of learners for a robust segmentation  _[1]_.
+* ***Model repository with extensively trained models:*** We provide a set of pre-trained models for various segmentation tasks. We applied model training using ***_very large and diverse MRI datasets_*** with carefully curated and verified ground-truth labels.
+* ***Easy installation and application:*** Using a few simple commands, users can easily install DeepMRSeg on different platforms, download pre-trained models, and apply these models on their images.
+* ***Extensibility:*** DeepMRSeg is built using a generic network architecture and a software package that allows extending it with minimal efforts. The model repository will grow in the future with regular addition of new models and tasks.
 
 ## Supported Platforms
 We have tested DeepMRSeg on the following platforms: 
@@ -35,24 +38,29 @@ Then follow steps from [direct installation](#direct-installation-at-default-loc
 
 ## Usage
 
-DeepMRSeg package allows users to apply a segmentation task using a pre-trained model (testing), or to train their own model using a custom training dataset (training).
-
-DeepMRSeg commands are called on the command prompt or on Anaconda prompt. After installation of the package, the user can use the following commands:
-
-For testing:
-
-```
-deepmrseg_test
-```
+DeepMRSeg commands are called on the command prompt or on Anaconda prompt. After installation of the package, users can apply a segmentation task using a pre-trained model (testing), or train their own model using a custom training dataset (training). 
 
 For training:
-
 
 ```
 deepmrseg_train
 ```
 
-Please see the user manual for more details.
+For testing:
+
+```
+deepmrseg_test 
+```
+
+
+Pre-trained models are hosted in [DeepMRSeg-Models repository](https://github.com/CBICA/DeepMRSeg-Models). Users can download a model from GitHub, save it in a local folder, and indicate the model path when calling _deepmrseg_test_
+
+, or use the command provided for downloading a model for a specific segmentation task:
+
+```
+deepmrseg_loadmodel --task [taskname]
+```
+
 
 
 
