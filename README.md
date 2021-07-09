@@ -4,13 +4,14 @@
 
 DeepMRSeg is a Python-based package for processing and analysis of MRI images. The package is developed and maintained by the [Center for Biomedical Image Computing and Analytics (CBICA)](https://www.cbica.upenn.edu/) at the University of Pennsylvania. As the name implies, main modules of DeepMRSeg are built upon Deep Learning models that perform a set of image segmentation steps on initial scans.
 
-DeepMRSeg aims to provide users a ***robust*** and ***accurate*** toolset for performing common image processing tasks in neuroimaging. In order to be able to meet these challenges DeepMRSeg uses a modified UNet architecture that combines an ensemble of learners. A second major feature of DeepMRSeg is the set of pre-trained models provided for various tasks. Importantly, we applied intensive model training using very large and diverse MRI datasets with carefully verified ground-truth labels.  
+DeepMRSeg aims to provide users a ***robust*** and ***accurate*** toolset for performing common image processing tasks in neuroimaging. In order to be able to meet these challenges DeepMRSeg uses a modified UNet architecture that combines an ensemble of learners.
+
+A second major feature of DeepMRSeg is a set of pre-trained models provided for various tasks. Importantly, we applied intensive model training using very large and diverse MRI datasets with carefully verified ground-truth labels.
 
 ## Supported Platforms
-These are the platforms we have tested. 
+We have tested DeepMRSeg on the following platforms: 
 -   Windows 10 Enterprise x64
-
-It may also work on other platforms.
+-   Ubuntu 18.04.3 , 20.04.2
 
 ## Prerequisities
 -   [Python 3](https://www.python.org/downloads/)
@@ -34,7 +35,26 @@ Then follow steps from [direct installation](#direct-installation-at-default-loc
 
 ## Usage
 
-Please see the user manual
+DeepMRSeg package allows users to apply a segmentation task using a pre-trained model (testing), or to train their own model using a custom training dataset (training).
+
+DeepMRSeg commands are called on the command prompt or on Anaconda prompt. After installation of the package, the user can use the following commands:
+
+For testing:
+
+```
+deepmrseg_test
+```
+
+For training:
+
+
+```
+deepmrseg_train
+```
+
+Please see the user manual for more details.
+
+
 
 ## License
 
