@@ -4,7 +4,7 @@
 
 DeepMRSeg is a Python-based package for processing and analysis of MRI images. The package is developed and maintained by the [Center for Biomedical Image Computing and Analytics (CBICA)](https://www.cbica.upenn.edu/) at the University of Pennsylvania. As the name implies, main modules of DeepMRSeg are built upon Deep Learning models that perform a set of image segmentation steps on initial scans.
 
-DeepMRSeg aims to provide users a ***robust*** and ***accurate*** toolset for performing common image processing tasks in neuroimaging. In order to be able to meet these challenges DeepMRSeg uses a modified UNet architecture that combines an ensemble of learners.
+DeepMRSeg aims to provide users a ***robust*** and ***accurate*** toolset for performing common image processing tasks in neuroimaging. In order to be able to meet these challenges DeepMRSeg uses a modified UNet architecture that combines an ensemble of learners _[1]_.
 
 A second major feature of DeepMRSeg is a set of pre-trained models provided for various tasks. Importantly, we applied intensive model training using very large and diverse MRI datasets with carefully verified ground-truth labels.
 
@@ -61,6 +61,8 @@ Please see the user manual for more details.
 ## How to cite DeepMRSeg
 
 ## Publications
+
+[1] Doshi, Jimit, et al. _DeepMRSeg: A convolutional deep neural network for anatomy and abnormality segmentation on MR images._ arXiv preprint arXiv:1907.02110 (2019).
 
 ## Authors and Contributors
 
