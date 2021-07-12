@@ -14,14 +14,15 @@ from . import deepmrseg_test
 ## Path to saved models
 ## FIXME: It would be better toread this from an external table hosted in model repo
 
-DEEPMRSEG = _os.path.expanduser("~/.deepmrseg/")
-MDL_DIR = _os.path.join(DEEPMRSEG, "trained_models")
+DEEPMRSEG = _os.path.expanduser(_os.path.join('~', '.deepmrseg'))
+MDL_DIR = _os.path.join(DEEPMRSEG, 'trained_models')
 
-MDL_DIR = '/home/guray/Documents/SBIA/Dev/DeepMRSeg/MyModels/ModelRepo'
+# Temp for testing
+# MDL_DIR = '/home/guray/Documents/SBIA/Dev/DeepMRSeg/MyModels/ModelRepo'
 
 modelDict = {}
-modelDict['Hippo'] = _os.path.join(MDL_DIR, 'DeepMRSeg_Hippo')
-modelDict['DLICV'] = _os.path.join(MDL_DIR, 'DeepMRSeg_DLICV')
+#modelDict['hippo'] = _os.path.join(MDL_DIR, 'DeepMRSeg_Hippo')
+modelDict['dlicv'] = _os.path.join(MDL_DIR, 'dlicv', 'DeepMRSeg_DLICV')
 
 ##############################################################
 
