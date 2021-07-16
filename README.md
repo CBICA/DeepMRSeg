@@ -15,6 +15,7 @@ DeepMRSeg aims to provide users a ***robust***, ***accurate*** and ***user-frien
 We have tested DeepMRSeg on the following platforms: 
 -   Windows 10 Enterprise x64
 -   Ubuntu 18.04.3 , 20.04.2
+It may also work on other platforms.
 
 ## Prerequisities
 -   [Python 3](https://www.python.org/downloads/)
@@ -26,7 +27,7 @@ We have tested DeepMRSeg on the following platforms:
 ```
 git clone  https://github.com/CBICA/DeepMRSeg.git
 cd DeepMRSeg
-python setup.py install
+python setup.py install #install DeepMRSeg and its dependencies
 ```
 
 #### 2) Installation in conda environment
@@ -109,8 +110,6 @@ deepmrseg_apply --task brainmask --sList subjectList.csv
 #   User provides a csv file with columns: ID,InputFL,InputT1,OutputImage
 deepmrseg_apply --task wmlesion --sList subjectList.csv
 ```
-
-
 
 ## License
 
