@@ -1,7 +1,7 @@
 
 ################################################ DECLARATIONS ################################################
 __author__	 = 'Jimit Doshi'
-__EXEC_NAME__	 = "deepmrseg_test_v3D"
+__EXEC_NAME__	 = "deepmrseg_test"
 
 import os as _os
 import sys as _sys
