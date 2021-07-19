@@ -17,9 +17,6 @@ from . import deepmrseg_test
 DEEPMRSEG = _os.path.expanduser(_os.path.join('~', '.deepmrseg'))
 MDL_DIR = _os.path.join(DEEPMRSEG, 'trained_models')
 
-# Temp for testing
-# MDL_DIR = '/home/guray/Documents/SBIA/Dev/DeepMRSeg/MyModels/ModelRepo'
-
 modelDict = {}
 #modelDict['hippo'] = _os.path.join(MDL_DIR, 'DeepMRSeg_Hippo')
 modelDict['dlicv'] = _os.path.join(MDL_DIR, 'dlicv', 'DeepMRSeg_DLICV')
