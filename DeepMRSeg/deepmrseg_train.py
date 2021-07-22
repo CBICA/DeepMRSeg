@@ -443,7 +443,7 @@ class Train(object):
 					print( "\t\titerations : %d, time per 1000 iterations: %.2f mins" % \
 									( i, timeperiter ) )
 
-					print( "\t\t\t training metrics \t: mIOU: %.4f, Loss: %.4f (%.4f,%.4f,%.4f)" \
+					print( "\t\t\t training metrics \t: mIOU: %.4f, Loss: %.4f (%.1E,%.1E,%.1E)" \
 							% ( self.iou_train.result(), \
 							self.epoch_train_loss_avg.result(), \
 							self.epoch_train_ioul_avg.result(), \
@@ -506,14 +506,14 @@ class Train(object):
 			print( "\n\tepoch : %d, time/epoch: %.2f mins, learning rates: %.1E" \
 					% ( epoch, timeperepoch, current_lr ) )
 
-			print( "\t\t training metrics \t: mIOU: %.4f (%.4f), Loss: %.4f (%.4f,%.4f,%.4f)" \
+			print( "\t\t training metrics \t: mIOU: %.4f (%.4f), Loss: %.4f (%.1E,%.1E,%.1E)" \
 					% ( self.iou_train.result(), accu_train_recent.mean(), \
 					self.epoch_train_loss_avg.result(), \
 					self.epoch_train_ioul_avg.result(), \
 					self.epoch_train_mael_avg.result(), \
 					self.epoch_train_bcel_avg.result() ) )
 
-			print( "\t\t validation metrics \t: mIOU: %.4f (%.4f), Loss: %.4f (%.4f,%.4f,%.4f) ( %.4f, %.4f )\n" \
+			print( "\t\t validation metrics \t: mIOU: %.4f (%.4f), Loss: %.4f (%.1E,%.1E,%.1E) ( %.4f, %.4f )\n" \
 					% ( self.iou_val.result(), accu_val_recent.mean(), \
 					self.epoch_val_loss_avg.result(), \
 					self.epoch_val_ioul_avg.result(), \
@@ -708,31 +708,34 @@ def _main():
 	print("Patience Param \t: %d" % (FLAGS.patience))
 	print("Normalization \t: %s\n" % (FLAGS.norm))
 
-	### Create model dir
-	if not _os.path.isdir( FLAGS.mdlDir ):
-		_os.makedirs( FLAGS.mdlDir )
+	### Create model/configs dir
+	if not _os.path.isdir( _os.path.join( FLAGS.mdlDir + '/configs' ) ):
+		_os.makedirs( _os.path.join( FLAGS.mdlDir + '/configs' ) )
 
 	### Create a config file containing training parameters
 	# dump to json file
 	train_config_json = _json.dumps( FLAGS.__dict__,sort_keys=True,indent=4 )
 	#WITH
-	with open( _os.path.join( FLAGS.mdlDir + '/train_config.json' ), "w" ) as outfile:
+	with open( _os.path.join( FLAGS.mdlDir + '/configs/train_config.json' ), "w" ) as outfile:
 		outfile.write( train_config_json )
 	#ENDWITH
 
 	### Create a config file for testing
 	test_config = {}
 	#FOR KEYS
-	for k in [ 'num_classes', 'reorient', 'rescale', 'ressize', 'roi', 'xy_width' ]:
+	for k in [ 'refMod', 'otherMods', 'num_classes', 'reorient', 'rescale', 'ressize', 'roi', 'xy_width' ]:
 		test_config[k] = FLAGS.__dict__[k]
 	#ENDFOR KEYS
 	
 	# dump to json file
 	test_config_json = _json.dumps( test_config,sort_keys=True,indent=4 )
 	#WITH
-	with open( _os.path.join( FLAGS.mdlDir + '/test_config.json' ), "w" ) as outfile:
+	with open( _os.path.join( FLAGS.mdlDir + '/configs/test_config.json' ), "w" ) as outfile:
 		outfile.write( test_config_json )
 	#ENDWITH
+
+	### Save the ROI csv file to the configs/ folder
+	_shutil.copyfile( FLAGS.roi, _os.path.join( FLAGS.mdlDir + '/configs/ROI_Indices.csv') )
 
 	### Read subject list file
 	print("Reading the input subject list and running sanity checks on the files")
@@ -772,9 +775,9 @@ def _main():
 	print("Splitting the training list into training and validation")
 	_sys.stdout.flush()
 
-#	******************************************
-#	* COMMENTED OUT ONLY FOR EXPERIMENTATION *
-#	******************************************
+#	****************************************
+#	* COMMENT OUT ONLY FOR EXPERIMENTATION *
+#	****************************************
 	# Randomize list
 	_shuffle( all_sublist )
 
