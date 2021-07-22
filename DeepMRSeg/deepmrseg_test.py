@@ -14,7 +14,7 @@ import tempfile as _tempfile
 import nibabel as _nib
 import csv as _csv
 
-#from guppy import hpy
+import shutil as _shutil
 
 from . import pythonUtilities
 
@@ -367,11 +367,6 @@ def predict_classes( refImg, otherImg, num_classes, allmodels, roi_indices, out=
 	#ENDIF OUTFILE PROVIDED
 #ENDDEF
 
-	
-
-
-	
-
 
 ################################################ END OF FUNCTIONS ################################################
 	
@@ -507,7 +502,7 @@ def _main_warg(argv):
 		numMod = len(FLAGS.inImg)   
 		modCols = 'Mod_'
 		modCols = [modCols + str(i+1) for i in range(numMod)]
-		columns = _np.array(['ID'] + modCols + ['OutImg']).reshape(1,-11)
+		columns = _np.array(['ID'] + modCols + ['OutImg']).reshape(1,-1)
 
 		# Add absolute path to images
 		FLAGS.inImg = list(map(_os.path.abspath, FLAGS.inImg))   

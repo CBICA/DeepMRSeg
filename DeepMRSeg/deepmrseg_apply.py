@@ -18,7 +18,6 @@ DEEPMRSEG = _os.path.expanduser(_os.path.join('~', '.deepmrseg'))
 MDL_DIR = _os.path.join(DEEPMRSEG, 'trained_models')
 
 modelDict = {}
-#modelDict['hippo'] = _os.path.join(MDL_DIR, 'DeepMRSeg_Hippo')
 modelDict['dlicv'] = _os.path.join(MDL_DIR, 'dlicv', 'DeepMRSeg_DLICV')
 
 ##############################################################
