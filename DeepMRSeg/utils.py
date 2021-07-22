@@ -23,12 +23,14 @@ def plot_confusion_matrix(cm, class_names):
 		class_names (array, shape = [n]): String names of the integer classes
 	"""
 	# Normalize confusion matrix
-	cm_n = cm / cm.sum(axis=1)[:, _np.newaxis]
+	cm_r = cm / cm.sum(axis=1)[:, _np.newaxis]
+
+	reca = _np.diag(cm_r).mean()
 
 	# Prepare figure
 	figure = _plt.figure(figsize=(8,8))
-	_plt.imshow( cm_n, interpolation='nearest', cmap=_plt.cm.Blues)
-	_plt.title("Confusion matrix")
+	_plt.imshow( cm_r, interpolation='nearest', cmap=_plt.cm.Blues)
+	_plt.title( "Normalized confusion matrix ($Recall_{mean}=%.4f$)" % reca )
 	_plt.colorbar()
 	tick_marks = _np.arange(len(class_names))
 	#IF
@@ -42,13 +44,13 @@ def plot_confusion_matrix(cm, class_names):
 	#ENDIF
 
 	# Compute the labels from the normalized confusion matrix.
-	labels = _np.around( cm_n, decimals=2 )
+	labels = _np.around( cm_r, decimals=2 )
 
 	# Use white text if squares are dark; otherwise black.
 	if len( class_names ) < 50:
 		threshold = 0.5 #cm.max() / 2.
-		for i, j in _itertools.product(range(cm_n.shape[0]), range(cm_n.shape[1])):
-			color = "white" if cm_n[i, j] > threshold else "black"
+		for i, j in _itertools.product(range(cm_r.shape[0]), range(cm_r.shape[1])):
+			color = "white" if cm_r[i, j] > threshold else "black"
 			_plt.text( j, i, labels[i, j], horizontalalignment="center", color=color )
 
 	_plt.tight_layout()
