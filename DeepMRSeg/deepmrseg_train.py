@@ -84,8 +84,8 @@ def read_flags():
 				help="number of classes to be considered in the input")
 	inpArgs.add_argument( "--label_balance", default=1, type=int, \
 				help="weights to be used for positive/foreground labels" )
-	inpArgs.add_argument( "--rescale", default='norm', type=str, \
-				help="rescale method, choose from { minmax, norm }")
+	inpArgs.add_argument( "--rescale", default='norm', type=str, choices=['minmax','norm'], \
+				help="rescale method")
 	inpArgs.add_argument( "--xy_width", default=320, type=int, \
 				help="xy dimensions of the input patches. \
 					Determines how much each slice needs to be padded in the xy dimension. \
@@ -99,21 +99,19 @@ def read_flags():
 #	TRAINING
 #	========
 	trainArgs = parser.add_argument_group( 'TRAINING' )
-	trainArgs.add_argument( "--arch", default='ResNet', type=str, \
-				help="UNet architecture to be used choose from { UNet_vanilla, UNet_vanilla_bn, ResNet, ResInc, }" )
+	trainArgs.add_argument( "--arch", default='ResNet', type=str, choices=['UNet_vanilla','UNet_vanilla_norm','ResNet','ResInc'], \
+				help="UNet architecture to be used" )
 	trainArgs.add_argument( "--num_epochs", default=10, type=int, \
 				help="number of training epochs" )
 	trainArgs.add_argument( "--min_epochs", default=5, type=int, \
 				help="minimum number of training epochs to run before evaluating \
 					early stopping criteria")
-	trainArgs.add_argument( "--optimizer", default='RMSProp', type=str, \
-				help="optimizer to be used for the first part of the training \
-					 choose from { 'Adam', 'RMSProp', 'SGD', 'Momentum' }")
+	trainArgs.add_argument( "--optimizer", default='Adam', type=str, choices=['Adam','RMSProp','SGD','Momentum'], \
+				help="optimizer to be used")
 	trainArgs.add_argument( "--learning_rate", default=0.05, type=float, \
 				help="initial learning rate to be used" )
-	trainArgs.add_argument( "--lr_sch", default='EXP', type=str, \
-				help="learning rate schedule \
-					choose from { EXP, PLAT }" )
+	trainArgs.add_argument( "--lr_sch", default='EXP', type=str, choices=['EXP','PLAT'], \
+				help="learning rate schedule" )
 	trainArgs.add_argument( "--decay", default=0.9, type=float, \
 				help="exponential_decay for the learning rate" )
 	trainArgs.add_argument( "--patience", default=5, type=int, \
@@ -136,9 +134,8 @@ def read_flags():
 				help="use deep supervision of the network")
 	trainArgs.add_argument( "--lite", default=False, action="store_true", \
 				help="use the lite version of the network")
-	trainArgs.add_argument( "--norm", default='batch', type=str, \
-				help="normalization layer to use \
-					 choose from { 'batch', 'instance' }")
+	trainArgs.add_argument( "--norm", default='batch', type=str, choices=['batch','instance'], \
+				help="normalization layer to use")
 	trainArgs.add_argument( "--alpha", default=50, type=float, \
 				help="weighted loss of the form \
 					loss = alpha*dice_loss + (100-alpha)*(mae+bce)")
