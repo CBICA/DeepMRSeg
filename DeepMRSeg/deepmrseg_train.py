@@ -6,6 +6,10 @@ __EXEC_NAME__	 = "deepmrseg_train"
 
 import os as _os
 import sys as _sys
+
+_sys.path.append( _os.path.dirname( _sys.argv[0] ) )
+_os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # any of {'0': DEBUG, '1': INFO, '2': WARNING, '3': ERROR}
+
 import json as _json
 import time as _time
 import signal as _signal
@@ -13,10 +17,9 @@ import tensorflow as _tf
 import numpy as _np
 import platform as _platform
 
-_sys.path.append( _os.path.dirname( _sys.argv[0] ) )
+
 
 from . import losses
-
 from .data_io import check_files, extract_pkl
 from .models import create_model
 from .data_augmentation import data_reader
@@ -49,7 +52,7 @@ def read_flags():
 #	INPUT LIST
 #	==========
 	inputArgs = parser.add_argument_group( 'REQUIRED INPUT ARGS' )
-	inputArgs.add_argument( "--sList", default=None, type=str, required=True, \
+	inputArgs.add_argument( "--sList", default=None, type=str, \
 				help="absolute path to the subject list for training")
 	inputArgs.add_argument( "--idCol", default=None, type=str, \
 				help="id column name (e.g.: 'ID')" )
@@ -152,6 +155,7 @@ def read_flags():
 
 #	FLAGS
 #	=====
+
 	### Read config file first, if provided
 	if configarg.config:
 		# Read the JSON config file
