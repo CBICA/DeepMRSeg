@@ -21,6 +21,8 @@ from . import pythonUtilities
 from .data_io import load_res_norm
 from .utils import get_roi_indices
 
+_os.environ['COLUMNS'] = "90"
+
 ################################################ FUNCTIONS ################################################
 
 ############## HELP ##############
@@ -67,50 +69,32 @@ def read_flags(argv):
 #	===========
 	dirArgs = parser.add_argument_group( 'MODEL', 'Trained model directory')
 	dirArgs.add_argument( "--mdlDir", action='append', default=None, type=str, \
-		help=	'Path to the directory where the trained model should be loaded from. \
-			Relative or absolute paths can be used. The user can enter multiple models \
-			as "--mdlDir Model1 --mdlDir Model2 ...". In case of multiple models, \
-			each model will be applied individually, and the output of multiple models \
-			will be combined into a single segmentation. (REQUIRED)')
+		help=	'Path to the directory where the trained model should be loaded from. (REQUIRED)')
 
 #	I/O
 #	==========
 	## I/O Option1: Single case processing
 	ioArgs1 = parser.add_argument_group( 'I/O OPTION 1', 'Single case processing')
 	ioArgs1.add_argument( "--inImg", action='append', default=None, type=str, \
-		help=	'Input image file name. Relative or absolute paths can be used. \
-			For models that require multi-modal input, the user can enter multiple images \
-			as "--inImg imgMod1 --inImg imgMod2 ...". The number and order of input image \
-			modalities should match the ones used during training. (REQUIRED)')
+		help=	'Input image name. For multi-modal tasks multiple image names \
+			can be entered as "--inImg imgMod1 --inImg imgMod2 ..." . (REQUIRED)')
 	
 	ioArgs1.add_argument( "--outImg", default=None, type=str, \
-		help=	'Output image file name. Relative or absolute paths can be used. \
-			Output image will be saved as a ".nii.gz" image. \
-			The output folder will be created if it does not exist. \
-			Processing is aborted if output image exists. (REQUIRED)')
+		help=	'Output image name. (REQUIRED)')
 
 	## I/O Option2: Batch I/O from list
 	ioArgs2 = parser.add_argument_group( 'I/O OPTION 2', 'Batch processing using image list')
 	ioArgs2.add_argument( "--sList", default=None, type=str, \
-		help=	'Image list file name. Enter a comma separated list file with columns for: \
-			ID, input image(s) and output image. \
-			Column names can be any text.  \
-			Every row includes input and output image names for one subject. All image names \
-			should be absolute paths. For models that require multi-modal input, \
-			the user can enter input images in multiple columns. The number and order \
-			of input image modalities should match the ones used during training. (REQUIRED)')
+		help=	'Image list file name. Enter a comma separated list file with \
+			columns for: ID, input image(s) and output image. (REQUIRED)')
 
 	## I/O Option3: Batch I/O from folder
-	ioArgs3 = parser.add_argument_group( 'I/O OPTION 3', 'Batch processing of all images in a folder')
+	ioArgs3 = parser.add_argument_group( 'I/O OPTION 3', 'Batch processing of all images in a folder  (works only for single-modality tasks)')
 	ioArgs3.add_argument( "--inDir", default=None, type=str, \
-		help=	'Input folder name. All images with the input suffix within the input folder \
-			and its subfolders are processed individually. WARNING: I/O OPTION 3 can not be used \
-			with models that require multi-modal input. For such cases please use I/O OPTION 2! (REQUIRED)')
-	
+			help=	'Input folder name. (REQUIRED)')
+
 	ioArgs3.add_argument( "--outDir", default=None, type=str, \
-		help=	'Output folder name. The output folder will be created if it does not exist. \
-			Output images will be saved as ".nii.gz" images, named as input image file name \
-			appended with the output suffix. (REQUIRED)')
+		help=	'Output folder name. (REQUIRED)')
 	
 	ioArgs3.add_argument( "--inSuff", default='.nii.gz', type=str, \
 		help='Input image suffix (default: .nii.gz)')
@@ -126,19 +110,16 @@ def read_flags(argv):
 		help="Batch size  (default: 64)" )
 
 	otherArgs.add_argument( "--probs", default=False, action="store_true", \
-		help=	'Flag to indicate whether to save a probability map for each segmentation label. \
-			Probability maps will be saved with the output image name appended with the \
-			suffix "_prob[N].nii.gz", where [N] is the label for each class type \
-			(example: _prob0.nii.gz: background probability map, _prob1.nii.gz: foreground \
-			probability map, for a binary segmentation task). (default: False)')
+		help=	'Flag to indicate whether to save a probability map for \
+			each segmentation label. (default: False)')
 
 	otherArgs.add_argument( "--nJobs", default=None, type=int, \
 		help="Number of jobs/threads (default: automatically determined)" )
 	
 	otherArgs.add_argument( "--tmpDir", default=None, type=str, \
-                help=	'Absolute path to the temporary directory. If not provided, a temporary directory \
-			will be created automatically and will be deleted at the end of processing. \
-			The user defined temporary directory and its contents will not be removed (default: None)' )
+                help=	'Absolute path to the temporary directory. If not provided, \
+			temporary directory will be created automatically and will be \
+			deleted at the end of processing. (default: None)' )
 
 	### Read args from CLI
 	flags = parser.parse_args(argv[1:])
