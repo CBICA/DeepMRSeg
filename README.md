@@ -48,7 +48,7 @@ Pre-trained models for testing are hosted in [DeepMRSeg-Models repository](https
 Alternatively, the model can be downloaded to a pre-defined local folder (_~/.deepmrseg/trained_models_) automatically using the command:
 
 ```
-deepmrseg_loadmodel
+deepmrseg_downloadmodel
 ```
 
 #### Training and testing:
@@ -79,36 +79,38 @@ Note that _deepmrseg_apply_ is a wrapper to _deepmrseg_test_, which calls it wit
 
 #### Examples:
 
-We provide here few examples using minimal argument sets as a quick reference. These examples also show 3 possible I/O options provided for different use cases. 
+We provide here few examples using minimal argument sets as a quick reference. These examples also show 3 possible I/O options provided for different use cases (single subject, batch processing using an image list and batch processing of images in a folder).
+
 Please see the user manual (or call the command with the _-h_ option) for details of the complete command line arguments for _deepmrseg_train_ and _deepmrseg_test_.
 
 ```
 # Download pre-trained brainmask segmentation model
-deepmrseg_loadmodel --task brainmask
+deepmrseg_downloadmodel --task brainmask
 
 # Download pre-trained WM lesion segmentation model
-deepmrseg_loadmodel --task wmlesion
+deepmrseg_downloadmodel --task wmlesion
 
-# Segment brain for single subject
+# Process single subject (brain mask segmentation)
 deepmrseg_apply --task brainmask --inImg subj1_T1.nii.gz --outImg subj1_T1_BRAIN.nii.gz     
 
-# Segment WM lesions for single subject 
+# Process single subject (WM lesion segmentation)
 #   WM lesion segmentation model requires both FL and T1 scans 
-#   Img names for different modalities are entered as repeated args
-deepmrseg_apply --task brainmask --inImg subj1_FL.nii.gz --inImg subj1_T1.nii.gz --outImg subj1_T1_BRAIN.nii.gz     
+#   Img names for different modalities are entered as repeated args in the same order
+#   used in model training
+deepmrseg_apply --task wmlesion --inImg subj1_FL.nii.gz --inImg subj1_T1.nii.gz --outImg subj1_T1_WMLES.nii.gz     
 
-# Segment brain for multiple subjects in input folder 
-#   Testing is applied on all .nii.gz images in the folder
-deepmrseg_apply --task brainmask --inDir myindir --outDir myoutdir --outSuff _BRAIN
-
-# Segment brain for multiple subjects using a subject list
+# Batch processing of multiple subjects using a subject list
 #   User provides a csv file with columns: ID,InputT1,OutputImage
 deepmrseg_apply --task brainmask --sList subjectList.csv
 
-# Segment WM lesions for multiple subjects using a subject list
+# Batch processing of multiple subjects using a subject list
 #   WM lesion segmentation model requires both FL and T1 scans 
 #   User provides a csv file with columns: ID,InputFL,InputT1,OutputImage
 deepmrseg_apply --task wmlesion --sList subjectList.csv
+
+# Batch processing of multiple subjects in input folder 
+#   Testing is applied individually to all images with the given suffix in the input folder
+deepmrseg_apply --task brainmask --inDir myindir --outDir myoutdir --inSuff _T1.nii.gz --outSuff _BRAIN
 ```
 
 ## License
