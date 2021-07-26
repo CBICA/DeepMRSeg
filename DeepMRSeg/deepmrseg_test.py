@@ -692,27 +692,12 @@ def _main_warg(argv):
 				#ENDIF
 			#ENDFOR
 		#ENDWITH OPENFILE
-
-		### Print resouce usage
-		print("\nResource usage for this process")
-		print("\tetime \t:", _np.round( ( _time.time() - startTimeStamp )/60, 2 ), "mins")
-	
-		#resource package only available in Unix
-		if _platform.system() != 'Windows':
-			import resource as _resource
-	
-			rus = _resource.getrusage(0)
-			print("\tutime \t:", _np.round( rus.ru_utime, 2 ))
-			print("\tstime \t:", _np.round( rus.ru_stime, 2 ))
-			print("\tmaxrss \t:", _np.round( rus.ru_maxrss / 1.e6, 2 ), "GB")
-
-			_sys.stdout.flush()
 	#ENDFOR
-	
+
 	#####################################################################
 	## Merge output from all models
 	
-	
+	#IF
 	if num_models > 1:
 
 		print("\n")
@@ -804,14 +789,31 @@ def _main_warg(argv):
 		#ENDTRY
 	#ENDIF
 
+	### Print resouce usage
+	print("\nResource usage for this process")
+	print("\tetime \t:", _np.round( ( _time.time() - startTimeStamp )/60, 2 ), "mins")
+
+	#resource package only available in Unix
+	#IF
+	if _platform.system() != 'Windows':
+		import resource as _resource
+
+		rus = _resource.getrusage(0)
+		print("\tutime \t:", _np.round( rus.ru_utime, 2 ))
+		print("\tstime \t:", _np.round( rus.ru_stime, 2 ))
+		print("\tmaxrss \t:", _np.round( rus.ru_maxrss / 1.e6, 2 ), "GB")
+
+		_sys.stdout.flush()
+	#ENDIF
 
 # ENDDEF MAIN
 
+#DEF
 def _main():
 	### init argv
 	argv = _sys.argv
 	_main_warg(argv)
-
+#ENDDEF
 	
 #IF
 if __name__ == '__main__':
