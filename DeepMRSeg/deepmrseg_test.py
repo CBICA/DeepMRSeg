@@ -586,7 +586,6 @@ def _main_warg(argv):
 
 		print("\n")
 		print("\n---->	Model " + str(indMdl +1))
-		print("\t-->	Loading all stored models in model path " + str(indMdl+1) + ' : ' + currMdl)
 
 		print("\t-->	Rescale Method \t: %s" % (trainflag_rescale))
 		print("\t-->	XY width \t: %d" % (trainflag_xy_width))
@@ -595,9 +594,10 @@ def _main_warg(argv):
 
 		_sys.stdout.flush()
 		
+		print("\t-->	Loading all stored models in model path " + str(indMdl+1) + ' : ' + currMdl)
 		allmodels = []
-		# Launch threads to load models simultaneously
 
+		# Launch threads to load models simultaneously
 		#WITH
 		with _TPE( max_workers=None ) as executor:
 			# FOR ALL CHECKPOINTS
