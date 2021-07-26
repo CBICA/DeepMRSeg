@@ -45,8 +45,7 @@ def read_flags(argv):
   ## Apply single-modal segmentation task on single image (I/O OPTION 1)
   {prog} -m /my/models/bmask_mdldir --inImg sub1_T1.nii.gz --outImg sub1_bmaskseg.nii.gz
  
-  ## Apply multi-modal (FL and T1) segmentation task on single subject (I/O OPTION 1)
-  ## IMPORTANT NOTE: The order of input images should be the same as the one used in training
+  ## Apply multi-modal segmentation task on single subject (I/O OPTION 1)
   {prog} -m /my/models/wmlesion_mdldir --inImg sub1_FL.nii.gz --inImg sub1_T1.nii.gz --outImg sub1_wmlseg.nii.gz
 
   ## Apply multi-modal segmentation task on multiple images using an image list (I/O OPTION 2)
@@ -83,8 +82,7 @@ def read_flags(argv):
 		help=	'Input image name. For multi-modal tasks, multiple image names \
 			can be entered as "--inImg imgMod1 --inImg imgMod2 ... . \
 			The order of input images should be the same as the one used \
-			in training. Please refer to documentation of the specific \
-			model used." (REQUIRED)')
+			in training." (REQUIRED)')
 	ioArgs1.add_argument( "--outImg", default=None, type=str, \
 		help=	'Output image name (REQUIRED)')
 
@@ -92,7 +90,8 @@ def read_flags(argv):
 	ioArgs2 = parser.add_argument_group( 'I/O OPTION 2', 'Batch processing using image list')
 	ioArgs2.add_argument( "--sList", default=None, type=str, \
 		help=	'Image list file name. Enter a comma separated list file with \
-			columns for: ID, input image(s) and output image (REQUIRED)')
+			columns for: ID, input image(s) and output image. The order of \
+			input images should be the same as the one used in training. (REQUIRED)')
 
 	## I/O Option3: Batch I/O from folder
 	ioArgs3 = parser.add_argument_group( 'I/O OPTION 3', 'Batch processing of all images in a folder  (works only for single-modality tasks)')
