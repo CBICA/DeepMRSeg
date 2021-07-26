@@ -35,8 +35,7 @@ setuptools.setup(
 	'networkx==2.5.1'
 	],
 	entry_points = {
-    'console_scripts': ['deepmrseg_train=DeepMRSeg.deepmrseg_train:_main',
-			'deepmrseg_test=DeepMRSeg.deepmrseg_test:_main'],
+    'console_scripts': ['deepmrseg_train=DeepMRSeg.deepmrseg_train:_main', 'deepmrseg_test=DeepMRSeg.deepmrseg_test:_main', 'deepmrseg_downloadmodel=DeepMRSeg.deepmrseg_downloadmodel:_main', 'deepmrseg_apply=DeepMRSeg.deepmrseg_apply:_main'],
     },
     classifiers=(
         "Programming Language :: Python :: 3",

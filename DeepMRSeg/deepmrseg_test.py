@@ -10,11 +10,18 @@ import json as _json
 import tensorflow as _tf
 import numpy as _np
 import platform as _platform
+import tempfile as _tempfile
+import nibabel as _nib
+import csv as _csv
+
+import shutil as _shutil
 
 from . import pythonUtilities
 
 from .data_io import load_res_norm
 from .utils import get_roi_indices
+
+_os.environ['COLUMNS'] = "90"
 
 ################################################ FUNCTIONS ################################################
 
@@ -22,103 +29,94 @@ from .utils import get_roi_indices
 
 
 #DEF ARGPARSER
-def read_flags():
+def read_flags(argv):
 	"""Parses args and returns the flags and parser."""
 	### Import modules
 	import argparse as _argparse
 
-	parser = _argparse.ArgumentParser( formatter_class=_argparse.ArgumentDefaultsHelpFormatter )
+	exeName = _os.path.basename(argv[0])
 
-#	CONFIG FILE
+	descTxt = '{prog} applies pre-trained segmentation model(s) on image(s) from single or multiple subjects.'.format(prog=exeName)
+
+	epilogTxt = '''Examples:
+	
+  ## Apply single-modal segmentation task on single image (I/O OPTION 1)
+  {prog} -m /my/models/bmask_mdldir --inImg sub1_T1.nii.gz --outImg sub1_bmaskseg.nii.gz
+ 
+  ## Apply multi-modal (FL and T1) segmentation task on single subject (I/O OPTION 1)
+  {prog} -m /my/models/wmlesion_mdldir --inImg sub1_FL.nii.gz --inImg sub1_T1.nii.gz --outImg sub1_wmlseg.nii.gz
+
+  ## Apply multi-modal segmentation task on multiple images using an image list (I/O OPTION 2)
+  {prog} -m /my/models/wmlesion_mdldir --sList my_img_list.csv
+     with my_img_list.csv:
+       ID,FLAIR,T1,OutImg
+       sub1,/my/indir/sub1_FL.nii.gz,/my/indir/sub1_T1.nii.gz,/my/outdir/sub1_wmlseg.nii.gz
+       sub2,/my/indir/sub2_FL.nii.gz,/my/indir/sub2_T1.nii.gz,/my/outdir/sub2_wmlseg.nii.gz
+       ...
+     
+  ## Apply single-modal segmentation task on multiple images within a folder (I/O OPTION 3)
+  {prog} -m /my/models/bmask_mdldir --inDir /my/indir --outDir /my/outdir --inSuff _T1.nii.gz --outSuff _bmaskseg.nii.gz
+ 
+  ## Apply multiple models and combine segmentations
+  {prog} -m /my/models/bmask_mdldir1 -m /my/models/bmask_mdldir2 ... [I/O OPTIONS]
+  
+  '''.format(prog=exeName)
+
+	parser = _argparse.ArgumentParser( formatter_class=_argparse.RawDescriptionHelpFormatter, \
+		description=descTxt, epilog=epilogTxt )
+
+#	MODELS
 #	===========
-	configArgs = parser.add_argument_group( 'CONFIG FILE' )
-	configArgs.add_argument( "--config", default=None, type=str, \
-				help="absolute path to the config file containing the parameters in a JSON format")
+	dirArgs = parser.add_argument_group( 'MODEL', 'Trained model directory')
+	dirArgs.add_argument( "--mdlDir", action='append', default=None, type=str, \
+		help=	'Path to the directory where the trained model should be loaded from (REQUIRED)')
 
-	# Only parse for "--config"
-	configarg,_ = parser.parse_known_args()
-
-#	INPUT LIST
+#	I/O
 #	==========
-	inputArgs = parser.add_argument_group( 'REQUIRED INPUT ARGS' )
-	inputArgs.add_argument( "--sList", default=None, type=str, \
-				help="absolute path to the subject list for training")
-	inputArgs.add_argument( "--idCol", default=None, type=str, \
-				help="id column name (e.g.: 'ID')" )
-	inputArgs.add_argument( "--refMod", default=None, type=str, \
-				help="referene modality column name (e.g.: 'FL')")
-	inputArgs.add_argument( "--otherMods", default=None, type=str, \
-				help="other modalities to use (e.g.: 'T1,T2')" )
-	inputArgs.add_argument( "--outCol", default=None, type=str, \
-				help="column name containing the output filepaths (e.g.: 'out')")
-	inputArgs.add_argument( "--roi", default=None, \
-				help="absolute path to the ROI csv containing the ROIs to be \
-					considered and their respective indices. If not provided, \
-					the ROIs are assumed to be in the range( 0,num_classes-1 )")
+	## I/O Option1: Single case processing
+	ioArgs1 = parser.add_argument_group( 'I/O OPTION 1', 'Single case processing')
+	ioArgs1.add_argument( "--inImg", action='append', default=None, type=str, \
+		help=	'Input image name. For multi-modal tasks, multiple image names \
+			can be entered as "--inImg imgMod1 --inImg imgMod2. \
+			Make sure the reference modality is provided first" (REQUIRED)')
+	ioArgs1.add_argument( "--outImg", default=None, type=str, \
+		help=	'Output image name (REQUIRED)')
 
-#	DIRECTORIES
+	## I/O Option2: Batch I/O from list
+	ioArgs2 = parser.add_argument_group( 'I/O OPTION 2', 'Batch processing using image list')
+	ioArgs2.add_argument( "--sList", default=None, type=str, \
+		help=	'Image list file name. Enter a comma separated list file with \
+			columns for: ID, input image(s) and output image (REQUIRED)')
+
+	## I/O Option3: Batch I/O from folder
+	ioArgs3 = parser.add_argument_group( 'I/O OPTION 3', 'Batch processing of all images in a folder  (works only for single-modality tasks)')
+	ioArgs3.add_argument( "--inDir", default=None, type=str, \
+			help=	'Input folder name (REQUIRED)')
+	ioArgs3.add_argument( "--outDir", default=None, type=str, \
+		help=	'Output folder name (REQUIRED)')
+	ioArgs3.add_argument( "--inSuff", default='.nii.gz', type=str, \
+		help='Input image suffix (default: .nii.gz)')
+	ioArgs3.add_argument( "--outSuff", default='_SEG.nii.gz', type=str, \
+		help="Output image suffix  (default: _SEG.nii.gz)")
+
+#	OTHER OPTIONS
 #	===========
-	dirArgs = parser.add_argument_group( 'DIRECTORIES' )
-	dirArgs.add_argument( "--mdlDir", nargs='+', default="model", type=str, \
-				help="absolute path to the directory where the model \
-					should be loaded from. \
-					You can provide multiple paths")
+	otherArgs = parser.add_argument_group( 'OTHER OPTIONS')
 
-#	INPUT IMAGE
-#	===========
-	inpArgs = parser.add_argument_group( 'INPUT IMAGE' )
-	inpArgs.add_argument( "--prep", default=False, action="store_true", \
-				help="flag indicating that the input images are \
-					already preprocessed (default: False)")
-	inpArgs.add_argument( "--num_classes", default=2, type=int, \
-				help="number of classes to be considered in the input")
-	inpArgs.add_argument( "--rescale", default='norm', type=str, \
-				help="rescale method, choose from { minmax, norm }")
-	inpArgs.add_argument( "--xy_width", default=320, type=int, \
-				help="xy dimensions of the input patches. \
-					Determines how much each slice needs to be padded \
-					in the xy dimension. Should be divisible by 2**depth.")
-	inpArgs.add_argument( "--ressize", default=1, type=float, \
-				help="isotropic voxel size for the input images \
-					input images will be resampled to this resolution" )
-	inpArgs.add_argument( "--reorient", default='LPS', type=str, \
-				help="reorient the testing images to match the \
-					provided orientation (in radiology convention)" )
-	inpArgs.add_argument( "--batch", default=64, type=int, \
-				help="batch size" )
+	otherArgs.add_argument( "--batch", default=64, type=int, \
+		help="Batch size  (default: 64)" )
+	otherArgs.add_argument( "--probs", default=False, action="store_true", \
+		help=	'Flag to indicate whether to save a probability map for \
+			each segmentation label (default: False)')
+	otherArgs.add_argument( "--nJobs", default=None, type=int, \
+		help="Number of jobs/threads (default: automatically determined)" )
+	otherArgs.add_argument( "--tmpDir", default=None, type=str, \
+                help=	'Absolute path to the temporary directory. If not provided, \
+			temporary directory will be created automatically and will be \
+			deleted at the end of processing (default: None)' )
 
-#	OUTPUT
-#	========
-	outArgs = parser.add_argument_group( 'OUTPUT' )
-	outArgs.add_argument( "--probs", default=False, action="store_true", \
-				help="flag to indicate whether the probabilities should \
-					be stored as nii.gz (default: no)")
-
-
-#	MISC
-#	====
-	miscArgs = parser.add_argument_group( 'MISCELLANEOUS' )
-	miscArgs.add_argument( "--verb", default=False, action="store_true", \
-				help="verbosity")
-	miscArgs.add_argument( "--nJobs", default=None, type=int, \
-				help="number of jobs/threads" )
-	miscArgs.add_argument( "--delay", default=1, type=int, \
-				help="delay between launching parallel prediction \
-					for each subject (default: 1)" )
-
-#	FLAGS
-#	=====
-	### Read config file first, if provided
-	if configarg.config:
-		# Read the JSON config file
-		with open(configarg.config) as f:
-			configflags = _json.load(f)
-
-		# Set args from the config file as defaults
-		parser.set_defaults( **configflags )
-
-	### Read remaining args from CLI and overwrite the defaults
-	flags = parser.parse_args()
+	### Read args from CLI
+	flags = parser.parse_args(argv[1:])
 
 	### Return flags and parser
 	return flags, parser
@@ -212,6 +210,7 @@ def run_model( im_dat, num_classes, allmodels, bs ):
 
 	### Create a tf Dataset from im_dat
 	im_dat_ds = _tf.data.Dataset.from_tensor_slices( (im_dat) ).batch( bs )
+	
 
 	# Launch testing
 	# FOR EACH MODEL
@@ -364,20 +363,13 @@ def predict_classes( refImg, otherImg, num_classes, allmodels, roi_indices, out=
 	#ENDIF OUTFILE PROVIDED
 #ENDDEF
 
-	
-
-
-	
-
 
 ################################################ END OF FUNCTIONS ################################################
 	
 ############## MAIN ##############
 #DEF
-def _main():
+def _main_warg(argv):
 
-	### init argv
-	argv = _sys.argv
 	
 	### Timestamps
 	import time as _time
@@ -397,34 +389,56 @@ def _main():
 	_signal.signal( _signal.SIGINT, signal_handler )
 	_signal.signal( _signal.SIGTERM, signal_handler )
 
+	##################################################
 	### Read command line args
-	print("\nParsing args    : %s\n" % (argv[ 1: ]) )
-	FLAGS,parser = read_flags()
-	print(FLAGS)
-
-	_sys.stdout.flush()
-
-	### Check the number of arguments
+	print("\nParsing args    : %s\n" % (argv) )
+	FLAGS,parser = read_flags(argv)
 	if len( argv ) == 1:
 		parser.print_help( _sys.stderr )
 		_sys.exit(1)
+	print(FLAGS)
+	_sys.stdout.flush()
 
+	##################################################
+	### Check required args
 
-	### Sanity checks on the provided arguments
-	# Check if input files provided exist
-	# FOR
-	for f in FLAGS.sList, FLAGS.roi:
-		pythonUtilities.check_file( f )
-	# ENDFOR
-	
-	# Check if xy_width matches the depth
-	# IF
-	if FLAGS.xy_width % 16 != 0:
-		print( "ERROR: The xy_width (%d) is not divisible by %d" % (FLAGS.xy_width,16) )
+	## Check mdlDir
+	if FLAGS.mdlDir is not None:                        ## Mdl dir
+		for tmpPath in FLAGS.mdlDir:
+			pythonUtilities.check_file( tmpPath )
+	else:
+		print('ERROR: Missing required arg: --mdlDir')
+		parser.print_help( _sys.stderr )
 		_sys.exit(1)
-	# ENDIF
-	
-	# if nJobs not defined
+
+	## Check I/O OPTIONS
+	if FLAGS.inImg is not None:                         ## CASE 1: Single inImg
+		IOType = 1
+		for tmpImg in FLAGS.inImg:
+			pythonUtilities.check_file( tmpImg )
+
+	elif FLAGS.sList is not None:                       ## CASE 2: Img list
+		IOType = 2
+		pythonUtilities.check_file( FLAGS.sList )
+		
+	elif FLAGS.inDir is not None:                       ## CASE 3: Img dir
+		IOType = 3
+		pythonUtilities.check_file( FLAGS.inDir )
+		
+		if FLAGS.outDir is None:
+			print('ERROR: Missing required arg: outDir')
+			parser.print_help( _sys.stderr )
+			_sys.exit(1)
+			
+	else:
+		print('ERROR: Missing required arg - The user should set one of the 3 I/O OPTIONS')
+		parser.print_help( _sys.stderr )
+		_sys.exit(1)
+
+	##################################################
+	### Check/set optional args
+
+	# Set nJobs
 	#IF
 	if FLAGS.nJobs:
 		nJobs = FLAGS.nJobs
@@ -432,143 +446,375 @@ def _main():
 		nJobs = _os.cpu_count()
 	#ENDIF
 
-	# if otherMods defined
+	# Set tmpDir
 	#IF
-	if FLAGS.otherMods:
-		otherMods = list(map( str, FLAGS.otherMods.split(',') ))
-		num_modalities = len(otherMods) + 1
+	if FLAGS.tmpDir:
+		user_defined_tmpdir = True
+		tmpDir = FLAGS.tmpDir
+		if not _os.path.isdir(FLAGS.tmpDir):
+			_os.makedirs( FLAGS.tmpDir )
 	else:
-		otherMods = None
-		num_modalities = 1
+		user_defined_tmpdir = False
+		tmpDir = _tempfile.mkdtemp( prefix='deepmrseg_test_' )
 	#ENDIF
+	
 
+	##################################################
 	### Print parsed args
-	print( "\nFile List \t: %s" % (FLAGS.sList) )
-	print( "ID Column \t: %s" % (FLAGS.idCol) )
-	print( "Output Column \t: %s" % (FLAGS.outCol) )
-	print( "Ref Modality \t: %s" % (FLAGS.refMod) )
-	print( "Other Mods \t: %s" % (otherMods) )
-	print( "Num of Mods \t: %d" % (num_modalities) )
-	print( "Data Prepped \t: %d" % (FLAGS.prep) )
+	print("\nModel dir(s) \t: %s" % (FLAGS.mdlDir))
+	if IOType == 1:
+		print( "\nInput image(s) \t: %s" % (' , '.join(FLAGS.inImg)) )
+		print( "Output image \t: %s" % (FLAGS.outImg) )
+	if IOType == 2:
+		print( "\nImage List \t: %s" % (FLAGS.sList) )
+	if IOType == 3:
+		print( "\nInput dir \t: %s" % (FLAGS.inDir) )
+		print( "Output dir \t: %s" % (FLAGS.outDir) )
+		print( "Input suffix \t: %s" % (FLAGS.outDir) )
+		print( "Output suffix \t: %s" % (FLAGS.outSuff) )
+	print("\nBatch Size \t: %s" % (FLAGS.batch))
+	print("Output probs \t: %d" % (FLAGS.probs))
+	print("Number of jobs \t: %d" % (nJobs))
+	print("Temp folder \t: %s" % (tmpDir))
 	
-	print("\nModel Dir(s) \t: %s" % (FLAGS.mdlDir))
-	print( "ROI csv \t: %s" % (FLAGS.roi) )
-
-	print("\nNum of Classes \t: %d" % (FLAGS.num_classes))
-	print("Rescale Method \t: %s" % (FLAGS.rescale))
-	print("XY width \t: %d" % (FLAGS.xy_width))
-	print("Voxel Size \t: %f" % (FLAGS.ressize))
-	print("Orientation \t: %s" % (FLAGS.reorient))
-	print("Batch Size \t: %s" % (FLAGS.batch))
-	
-	print("\nOutput probs \t: %d" % (FLAGS.probs))
-	
-	### Create temp dir, if needed
-	import csv as _csv
-	from concurrent.futures import ThreadPoolExecutor as _TPE
-
-	
-	##########################
-	#### LOAD ALL MODELS #####
-	##########################
-	print("\n")
-	print("\n---->	Loading all stored models in ", FLAGS.mdlDir)
 	_sys.stdout.flush()
 	
-	allmodels = []
-	# Launch threads to load models simultaneously
-	print("")
-	#WITH
-	with _TPE( max_workers=None ) as executor:
-		# FOR ALL MODEL DIRS
-		for mDir in FLAGS.mdlDir:
+	###############################################################
+	#### For direct I/O options: Create list file with in/out images 
+	if IOType == 1:
+
+		# Generate list of columns
+		numMod = len(FLAGS.inImg)   
+		modCols = 'Mod_'
+		modCols = [modCols + str(i+1) for i in range(numMod)]
+		columns = _np.array(['ID'] + modCols + ['OutImg']).reshape(1,-1)
+
+		# Add absolute path to images
+		FLAGS.inImg = list(map(_os.path.abspath, FLAGS.inImg))   
+		FLAGS.outImg = _os.path.abspath(FLAGS.outImg)
+
+		# Create csv data
+		data=_np.array(['Scan1'] + FLAGS.inImg + [FLAGS.outImg]).reshape(-1, numMod+2)
+
+		# Write csv file
+		outCsv = _os.path.join(tmpDir, 'deepmrseg_test_filelist.csv')
+		with open(outCsv, 'w') as csvfile:
+			csvw = _csv.writer(csvfile)
+			csvw.writerows(columns)
+			csvw.writerows(data)
+
+		# Set flag for image list
+		FLAGS.sList = outCsv
+
+	if IOType == 3:
+
+		# Generate list of columns
+		numMod = 1          ## Multi-modal data is not implemented for "input from folder"
+		modCols = 'Mod_'
+		modCols = [modCols + str(i+1) for i in range(numMod)]
+		columns = _np.array(['ID'] + modCols + ['OutImg']).reshape(1,-1)
+
+		# Add absolute path to in/out dirs
+		FLAGS.inDir = _os.path.abspath(FLAGS.inDir)
+		FLAGS.outDir = _os.path.abspath(FLAGS.outDir)
+		
+		# Add image extension to in/out suffix (.nii.gz for now)
+		if FLAGS.inSuff.endswith('.nii.gz') == False:
+			FLAGS.inSuff = FLAGS.inSuff + '.nii.gz'
+
+		# Add image extension to in/out suffix (.nii.gz for now)
+		if FLAGS.outSuff.endswith('.nii.gz') == False:
+			FLAGS.outSuff = FLAGS.outSuff + '.nii.gz'
+			
+		# Create data frame
+		#   Get list of all images with inSuff in the input dir
+		data = []
+		subInd = 1
+		for (dir, _, files) in _os.walk(FLAGS.inDir):
+			for i,f in enumerate(files):
+				if f.endswith(FLAGS.inSuff):
+					pathIn = _os.path.join(dir, f)
+					pathOut = _os.path.join(FLAGS.outDir, f).replace('.nii.gz', FLAGS.outSuff)
+					data.append(['Scan' + str(subInd), pathIn, pathOut])
+					subInd += 1
+			
+		# Write csv file
+		outCsv = _os.path.join(tmpDir, 'deepmrseg_test_filelist.csv')
+		with open(outCsv, 'w') as csvfile:
+			csvw = _csv.writer(csvfile)
+			csvw.writerows(columns)
+			csvw.writerows(data)
+
+		# Set flag for image list
+		FLAGS.sList = outCsv
+	###############################################################
+
+
+	###############################################################
+	#### Run testing independently for each model path
+
+	from concurrent.futures import ThreadPoolExecutor as _TPE
+
+	num_models = len(FLAGS.mdlDir)
+	FLAGS.mdlDir = list(map(_os.path.abspath, FLAGS.mdlDir))   
+
+	#FOR
+	for indMdl, currMdl in enumerate(FLAGS.mdlDir):
+	
+	
+		##########################
+		#### LOAD ALL MODELS #####
+		##########################
+
+		## Load test_config.json to set orientation
+		testConf = (_os.path.join(currMdl, 'configs', 'test_config.json'))
+		roiIndFile = (_os.path.join(currMdl, 'configs', 'ROI_Indices.csv'))
+		with open(testConf) as f:
+			testconfigflags = _json.load(f)
+		trainflag_orient = testconfigflags['reorient']
+		trainflag_rescale = testconfigflags['rescale']
+		trainflag_ressize = testconfigflags['ressize']
+		trainflag_xy_width = testconfigflags['xy_width']
+		trainflag_num_classes = testconfigflags['num_classes']
+		
+
+		print("\n")
+		print("\n---->	Model " + str(indMdl +1))
+
+		print("\t-->	Rescale Method \t: %s" % (trainflag_rescale))
+		print("\t-->	XY width \t: %d" % (trainflag_xy_width))
+		print("\t-->	Voxel Size \t: %f" % (trainflag_ressize))
+		print("\t-->	Orientation \t: %s" % (trainflag_orient))
+
+		_sys.stdout.flush()
+		
+		print("\t-->	Loading all stored models in model path " + str(indMdl+1) + ' : ' + currMdl)
+		allmodels = []
+
+		# Launch threads to load models simultaneously
+		#WITH
+		with _TPE( max_workers=None ) as executor:
 			# FOR ALL CHECKPOINTS
-			for checkpoint in _os.listdir( mDir ):
-				cppath = _os.path.join( mDir + '/' + checkpoint )
+			for checkpoint in _os.listdir( _os.path.join(currMdl, 'bestmodels')):
+				cppath = _os.path.join( currMdl, 'bestmodels', checkpoint )
 				print( "\t\t-->	Loading ", _os.path.basename(cppath) )
 				executor.submit( load_model,allmodels,cppath )
 			# ENDFOR ALL CHECKPOINTS
-		# ENDFOR ALL MODEL DIRS
-	#ENDWITH
-	print("")
-	_sys.stdout.flush()
-
-	### Encode indices to ROIs if provided
-	roi_indices = get_roi_indices( roicsv=FLAGS.roi )
-
-	### Predict
-	print("\n----> Running predictions for all subjects in the FileList")
-	_sys.stdout.flush()
-
-	#WITH OPENFILE
-	with open(FLAGS.sList) as f:
-		reader = _csv.DictReader( f )
-
-		#FOR
-		for row in reader:
-
-			### Get image filenames
-			refImg = row[FLAGS.refMod]
-			outImg = row[FLAGS.outCol]
-
-			# Get files for other modalities
-			otherModsFileList = []
-			#IF
-			if otherMods:
-				#FOR
-				for mod in otherMods:
-					otherModsFileList.extend( [ row[mod] ] )
-				#ENDFOR
-			#ENDIF
+		#ENDWITH
+		print("")
+		_sys.stdout.flush()
 		
-			### Create output directory if it doesn't exist already
-			#IF
-			if not _os.path.isdir( _os.path.dirname(outImg) ):
-				_os.makedirs( _os.path.dirname(outImg) )
-			#ENDIF
-
-			### Check if the file exists already
-			#IF
-			if not _os.path.isfile( outImg ):
-				print( "\t---->	%s" % ( row[FLAGS.idCol] ) )
-				_sys.stdout.flush()
+		_tf.keras.backend.clear_session()
 		
-				predict_classes( \
-						refImg=refImg, \
-						otherImg=otherModsFileList, \
-						num_classes=FLAGS.num_classes, \
-						allmodels=allmodels, \
-						roi_indices=roi_indices, \
-						out=outImg, \
-						probs=FLAGS.probs, \
-						rescalemethod=FLAGS.rescale, \
-						ressize=FLAGS.ressize, \
-						orient=FLAGS.reorient, \
-						xy_width=FLAGS.xy_width, \
-						batch_size=FLAGS.batch, \
-						nJobs=nJobs )
-			#ENDIF
-		#ENDFOR
-	#ENDWITH OPENFILE
+		### Encode indices to ROIs if provided
+		roi_indices = get_roi_indices(roicsv=roiIndFile)
+
+		### Predict
+		print("\n\t--> Running predictions for all subjects in the FileList")
+		_sys.stdout.flush()
+
+		# Read column names in input csv file
+		with open (FLAGS.sList) as f:
+			colNames = next(_csv.reader(f))
+			idCol = colNames[0]
+			refMod = colNames[1]
+			otherMods = colNames[2:-1]
+			outCol = colNames[-1]
+
+		#WITH OPENFILE
+		with open(FLAGS.sList) as f:
+			reader = _csv.DictReader( f )
+
+			#FOR
+			for row in reader:
+
+				### Get image filenames
+				subId = row[idCol]
+				refImg = row[refMod]
+				outImg = row[outCol]
+				
+				# Get files for other modalities
+				otherModsFileList = []
+				#IF
+				if otherMods:
+					#FOR
+					for mod in otherMods:
+						otherModsFileList.extend( [ row[mod] ] )
+					#ENDFOR
+				#ENDIF
+			
+				### Create output directory if it doesn't exist already
+				#IF
+				if not _os.path.isdir( _os.path.dirname(outImg) ):
+					_os.makedirs( _os.path.dirname(outImg) )
+				#ENDIF
+
+				### Check if the file exists already
+				#IF
+				if not _os.path.isfile( outImg ):
+					
+					# If there is a single model write the output directly to out image
+					if num_models == 1:
+						outSel = outImg
+						probsSel = FLAGS.probs
+						
+					# If not, create temporary out file for the current model
+					# also probs is set to True, as final mask will be calculated by combining probs from multiple models 
+					else:
+						outSel = _os.path.join(tmpDir, subId, subId + '_model' + str(indMdl+1) + '_out.nii.gz')
+						probsSel = True
+
+					#### Create output directory if it doesn't exist already
+					##IF
+					if not _os.path.isdir( _os.path.dirname(outSel) ):
+						_os.makedirs( _os.path.dirname(outSel) )
+					#ENDIF
+					
+					print( "\t\t-->	%s" % ( subId ) )
+					_sys.stdout.flush()
+			
+					predict_classes( \
+							refImg=refImg, \
+							otherImg=otherModsFileList, \
+							num_classes=trainflag_num_classes, \
+							allmodels=allmodels, \
+							roi_indices=roi_indices, \
+							out=outSel, \
+							probs=probsSel, \
+							rescalemethod=trainflag_rescale, \
+							ressize=trainflag_ressize, \
+							orient=trainflag_orient, \
+							xy_width=trainflag_xy_width, \
+							batch_size=FLAGS.batch, \
+							nJobs=nJobs )		
+					
+				#ENDIF
+			#ENDFOR
+		#ENDWITH OPENFILE
+	#ENDFOR
+
+	#####################################################################
+	## Merge output from all models
+	
+	#IF
+	if num_models > 1:
+
+		print("\n")
+		print("\n---->	Creating final predictions by combining output from each model")
+		_sys.stdout.flush()
+		
+		#WITH OPENFILE
+		with open(FLAGS.sList) as f:
+			reader = _csv.DictReader( f )
+
+			#FOR
+			for row in reader:
+			
+				### Get image filenames
+				subId = row[idCol]
+				outImg = row[outCol]
+
+				if not _os.path.isfile( outImg ):
+
+					# Get image size from the first nii.gz image 
+					im_shape = []
+					for f in _os.listdir(_os.path.join(tmpDir, subId)):
+						if f.endswith('.nii.gz'):
+							break
+					im_shape = _nib.load(_os.path.join(tmpDir, subId, f)).get_data().shape
+					
+					# Create array to store output probabilities
+					val_prob = _np.zeros( ( list(im_shape[0:3]) + [trainflag_num_classes] ) )
+				
+					# Create output directory if it doesn't exist already
+					##IF
+					if not _os.path.isdir( _os.path.dirname(outImg) ):
+						_os.makedirs( _os.path.dirname(outImg) )
+					#ENDIF
+
+					#FOR
+					for clInd in range(trainflag_num_classes):
+
+						clSuff = '_probabilities_' + str(clInd)
+
+						# Combine prob values for different models
+						files = []
+						for f in _os.listdir(_os.path.join(tmpDir, subId)):
+							if f.endswith(clSuff + '.nii.gz'):
+								files.append(_os.path.join(tmpDir, subId, f))
+						
+						if len(files)>0:
+							niiTmp = _nib.load(files[0])
+							probOut = niiTmp.get_data()                
+							if len(files) > 1:
+								for tmpF in files[1:]:
+									niiTmp = _nib.load(tmpF)
+									probTmp = niiTmp.get_data()
+									probOut += probTmp
+								probOut = probOut / len(files)
+								
+							# Write probabilities
+							if FLAGS.probs:
+								outNii = _nib.Nifti1Image( probOut, niiTmp.affine, niiTmp.header )
+								outNii.to_filename(outImg.replace('.nii.gz', '_probabilities_' + str(clInd) + '.nii.gz'))
+						val_prob[:,:,:,clInd] = probOut
+					#ENDFOR
+
+					### Get preds from prob matrix
+					val_bin = _np.argmax( val_prob, axis=-1 )
+
+					# Write binary mask
+					outNii = _nib.Nifti1Image( val_bin, niiTmp.affine, niiTmp.header )
+					outNii.set_data_dtype( 'uint8' )
+					outNii.to_filename(outImg)
+
+					print("\n")
+					print("\n---->	Out image : " + outImg)
+					_sys.stdout.flush()
+				
+				#ENDIF
+			#ENDFOR
+		#ENDWITH
+	#ENDIF
+	
+	### Remove tmpDir and its contents, if not user defined
+	#IF
+	if not user_defined_tmpdir:
+		#TRY
+		try:
+			_shutil.rmtree( tmpDir )
+		except:
+			print(( "Failed to delete: " + tmpDir ))
+		#ENDTRY
+	#ENDIF
 
 	### Print resouce usage
 	print("\nResource usage for this process")
 	print("\tetime \t:", _np.round( ( _time.time() - startTimeStamp )/60, 2 ), "mins")
-	
+
 	#resource package only available in Unix
+	#IF
 	if _platform.system() != 'Windows':
 		import resource as _resource
-	
+
 		rus = _resource.getrusage(0)
 		print("\tutime \t:", _np.round( rus.ru_utime, 2 ))
 		print("\tstime \t:", _np.round( rus.ru_stime, 2 ))
 		print("\tmaxrss \t:", _np.round( rus.ru_maxrss / 1.e6, 2 ), "GB")
 
 		_sys.stdout.flush()
+	#ENDIF
+
 # ENDDEF MAIN
+
+#DEF
+def _main():
+	### init argv
+	argv = _sys.argv
+	_main_warg(argv)
+#ENDDEF
 	
 #IF
 if __name__ == '__main__':
 	_main()
 #ENDIF
-

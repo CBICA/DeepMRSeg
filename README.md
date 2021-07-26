@@ -2,15 +2,19 @@
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/abb2c20d73ed464180494bf2fed3f0eb)](https://app.codacy.com/gh/CBICA/DeepMRSeg?utm_source=github.com&utm_medium=referral&utm_content=CBICA/DeepMRSeg&utm_campaign=Badge_Grade_Settings)
 
-DeepMRSeg is a Python-based package for processing and analysis of MRI images. The package is developed and maintained by the [Center for Biomedical Image Computing and Analytics (CBICA)](https://www.cbica.upenn.edu/) at the University of Pennsylvania. As the name implies, main modules of DeepMRSeg are built upon Deep Learning models that perform a set of image segmentation steps on initial scans.
+DeepMRSeg is a Python-based package for MRI image segmentation. The package is developed and maintained by the [Center for Biomedical Image Computing and Analytics (CBICA)](https://www.cbica.upenn.edu/) at the University of Pennsylvania. As the name implies, main modules of DeepMRSeg are built upon Deep Learning models that perform a set of image segmentation steps on MRI scans.
 
-DeepMRSeg aims to provide users a ***robust*** and ***accurate*** toolset for performing common image processing tasks in neuroimaging. In order to be able to meet these challenges DeepMRSeg uses a modified UNet architecture that combines an ensemble of learners. A second major feature of DeepMRSeg is the set of pre-trained models provided for various tasks. Importantly, we applied intensive model training using very large and diverse MRI datasets with carefully verified ground-truth labels.  
+DeepMRSeg aims to provide users a ***robust***, ***accurate*** and ***user-friendly*** toolset for performing common segmentation tasks in neuroimaging. In order to meet these challenges, the development of DeepMRSeg was guided by the following set of fundamental principles:
+
+* ***Efficient network architecture:*** DeepMRSeg uses a modified UNet architecture that combines an ensemble of learners for a robust segmentation  _[1]_.
+* ***Model repository with extensively trained models:*** We provide a set of pre-trained models for various segmentation tasks. We applied model training using ***_very large and diverse MRI datasets_*** with carefully curated and verified ground-truth labels.
+* ***Easy installation and application:*** Using a few simple commands, users can easily install DeepMRSeg on different platforms, download pre-trained models, and apply these models on their images. Most applications require no or minimal pre-processing; thus, users can directly apply them on raw scans.
+* ***Extensibility:*** DeepMRSeg is built using a generic network architecture and a software package that allows extending it with minimal effort. The model repository will grow in the future with regular addition of new models and tasks.
 
 ## Supported Platforms
-These are the platforms we have tested. 
--   Windows 10 x64
--   Ubuntu 20.04 64 bit
-
+We have tested DeepMRSeg on the following platforms: 
+-   Windows 10 Enterprise x64
+-   Ubuntu 18.04.3 , 20.04.2
 It may also work on other platforms.
 
 ## Prerequisities
@@ -19,14 +23,14 @@ It may also work on other platforms.
 
 ## Installation Instructions
 
-### 1) Direct installation at default location 
+#### 1) Direct installation at default location 
 ```
 git clone  https://github.com/CBICA/DeepMRSeg.git
 cd DeepMRSeg
 python setup.py install #install DeepMRSeg and its dependencies
 ```
 
-### 2) Installation in conda environment
+#### 2) Installation in conda environment
 ```
 conda create --name DeepMRSeg python=3.7.9
 conda activate DeepMRSeg
@@ -35,25 +39,87 @@ Then follow steps from [direct installation](#direct-installation-at-default-loc
 
 ## Usage
 
-On the cmd prompt (or on Anaconda prompt) type
+After installation of the package, users can call DeepMRSeg commands on the command prompt (or on Anaconda prompt).
 
-For testing
-```bash
-deepmrseg_test
+#### Pre-trained models:
+
+Pre-trained models for testing are hosted in [DeepMRSeg-Models repository](https://github.com/CBICA/DeepMRSeg-Models). Users can manually download a model from the model repository into a local folder.
+
+Alternatively, the model can be downloaded to a pre-defined local folder (_~/.deepmrseg/trained_models_) automatically using the command:
+
+```
+deepmrseg_downloadmodel
 ```
 
-For Training
-```bash
+#### Training and testing:
+
+Users can train their own model using a custom training dataset (training):
+
+```
 deepmrseg_train
 ```
 
-Please see the user manual for more details.
+or apply a pre-trained model on their image(s) (testing):
+
+```
+deepmrseg_test 
+```
+
+Note that _deepmrseg_train_ and _deepmrseg_test_ are generic commands that allow users to run training and testing in an exhaustive way by supplying a set of user arguments.
+
+#### Applying a task:
+
+Alternatively, we provide a simplified interface for the application of a specific segmentation task on user data:
+
+```
+deepmrseg_apply
+```
+
+Note that _deepmrseg_apply_ is a wrapper to _deepmrseg_test_, which calls it with a pre-defined model automatically downloaded using _deepmrseg_loadmodel_.
+
+#### Examples:
+
+We provide here few examples using minimal argument sets as a quick reference. These examples also show 3 possible I/O options provided for different use cases (single subject, batch processing using an image list and batch processing of images in a folder).
+
+Please see the user manual (or call the command with the _-h_ option) for details of the complete command line arguments for _deepmrseg_train_ and _deepmrseg_test_.
+
+```
+# Download pre-trained brainmask segmentation model
+deepmrseg_downloadmodel --task brainmask
+
+# Download pre-trained WM lesion segmentation model
+deepmrseg_downloadmodel --task wmlesion
+
+# Process single subject (brain mask segmentation)
+deepmrseg_apply --task brainmask --inImg subj1_T1.nii.gz --outImg subj1_T1_BRAIN.nii.gz     
+
+# Process single subject (WM lesion segmentation)
+#   WM lesion segmentation model requires both FL and T1 scans 
+#   Img names for different modalities are entered as repeated args in the same order
+#   used in model training
+deepmrseg_apply --task wmlesion --inImg subj1_FL.nii.gz --inImg subj1_T1.nii.gz --outImg subj1_T1_WMLES.nii.gz     
+
+# Batch processing of multiple subjects using a subject list
+#   User provides a csv file with columns: ID,InputT1,OutputImage
+deepmrseg_apply --task brainmask --sList subjectList.csv
+
+# Batch processing of multiple subjects using a subject list
+#   WM lesion segmentation model requires both FL and T1 scans 
+#   User provides a csv file with columns: ID,InputFL,InputT1,OutputImage
+deepmrseg_apply --task wmlesion --sList subjectList.csv
+
+# Batch processing of multiple subjects in input folder 
+#   Testing is applied individually to all images with the given suffix in the input folder
+deepmrseg_apply --task brainmask --inDir myindir --outDir myoutdir --inSuff _T1.nii.gz --outSuff _BRAIN
+```
 
 ## License
 
 ## How to cite DeepMRSeg
 
 ## Publications
+
+_[1] Doshi, Jimit, et al. DeepMRSeg: A convolutional deep neural network for anatomy and abnormality segmentation on MR images. arXiv preprint arXiv:1907.02110 (2019)_.
 
 ## Authors and Contributors
 
