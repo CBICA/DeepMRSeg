@@ -69,7 +69,7 @@ def read_flags(argv):
 #	===========
 	dirArgs = parser.add_argument_group( 'MODEL', 'Trained model directory')
 	dirArgs.add_argument( "--mdlDir", action='append', default=None, type=str, \
-		help=	'Path to the directory where the trained model should be loaded from. (REQUIRED)')
+		help=	'Path to the directory where the trained model should be loaded from (REQUIRED)')
 
 #	I/O
 #	==========
@@ -77,24 +77,24 @@ def read_flags(argv):
 	ioArgs1 = parser.add_argument_group( 'I/O OPTION 1', 'Single case processing')
 	ioArgs1.add_argument( "--inImg", action='append', default=None, type=str, \
 		help=	'Input image name. For multi-modal tasks multiple image names \
-			can be entered as "--inImg imgMod1 --inImg imgMod2 ..." . (REQUIRED)')
+			can be entered as "--inImg imgMod1 --inImg imgMod2 ..." (REQUIRED)')
 	
 	ioArgs1.add_argument( "--outImg", default=None, type=str, \
-		help=	'Output image name. (REQUIRED)')
+		help=	'Output image name (REQUIRED)')
 
 	## I/O Option2: Batch I/O from list
 	ioArgs2 = parser.add_argument_group( 'I/O OPTION 2', 'Batch processing using image list')
 	ioArgs2.add_argument( "--sList", default=None, type=str, \
 		help=	'Image list file name. Enter a comma separated list file with \
-			columns for: ID, input image(s) and output image. (REQUIRED)')
+			columns for: ID, input image(s) and output image (REQUIRED)')
 
 	## I/O Option3: Batch I/O from folder
 	ioArgs3 = parser.add_argument_group( 'I/O OPTION 3', 'Batch processing of all images in a folder  (works only for single-modality tasks)')
 	ioArgs3.add_argument( "--inDir", default=None, type=str, \
-			help=	'Input folder name. (REQUIRED)')
+			help=	'Input folder name (REQUIRED)')
 
 	ioArgs3.add_argument( "--outDir", default=None, type=str, \
-		help=	'Output folder name. (REQUIRED)')
+		help=	'Output folder name (REQUIRED)')
 	
 	ioArgs3.add_argument( "--inSuff", default='.nii.gz', type=str, \
 		help='Input image suffix (default: .nii.gz)')
@@ -111,7 +111,7 @@ def read_flags(argv):
 
 	otherArgs.add_argument( "--probs", default=False, action="store_true", \
 		help=	'Flag to indicate whether to save a probability map for \
-			each segmentation label. (default: False)')
+			each segmentation label (default: False)')
 
 	otherArgs.add_argument( "--nJobs", default=None, type=int, \
 		help="Number of jobs/threads (default: automatically determined)" )
@@ -119,7 +119,7 @@ def read_flags(argv):
 	otherArgs.add_argument( "--tmpDir", default=None, type=str, \
                 help=	'Absolute path to the temporary directory. If not provided, \
 			temporary directory will be created automatically and will be \
-			deleted at the end of processing. (default: None)' )
+			deleted at the end of processing (default: None)' )
 
 	### Read args from CLI
 	flags = parser.parse_args(argv[1:])
@@ -586,8 +586,8 @@ def _main_warg(argv):
 
 		print("\n")
 		print("\n---->	Model " + str(indMdl +1))
-		print("\n---->	Loading all stored models in model path " + str(indMdl+1) + ' : ' + currMdl)
-		print("\n---->	Reorient is : " + trainflag_orient)
+		print("\t-->	Loading all stored models in model path " + str(indMdl+1) + ' : ' + currMdl)
+		print("\t-->	Reorient is : " + trainflag_orient)
 		_sys.stdout.flush()
 		
 		allmodels = []
@@ -611,7 +611,7 @@ def _main_warg(argv):
 		roi_indices = get_roi_indices(roicsv=roiIndFile)
 
 		### Predict
-		print("\n----> Running predictions for all subjects in the FileList")
+		print("\n\t--> Running predictions for all subjects in the FileList")
 		_sys.stdout.flush()
 
 		# Read column names in input csv file
@@ -671,7 +671,7 @@ def _main_warg(argv):
 						_os.makedirs( _os.path.dirname(outSel) )
 					#ENDIF
 					
-					print( "\t---->	%s" % ( subId ) )
+					print( "\t\t-->	%s" % ( subId ) )
 					_sys.stdout.flush()
 			
 					predict_classes( \
