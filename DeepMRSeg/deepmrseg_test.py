@@ -76,9 +76,9 @@ def read_flags(argv):
 	## I/O Option1: Single case processing
 	ioArgs1 = parser.add_argument_group( 'I/O OPTION 1', 'Single case processing')
 	ioArgs1.add_argument( "--inImg", action='append', default=None, type=str, \
-		help=	'Input image name. For multi-modal tasks multiple image names \
-			can be entered as "--inImg imgMod1 --inImg imgMod2 ..." (REQUIRED)')
-	
+		help=	'Input image name. For multi-modal tasks, multiple image names \
+			can be entered as "--inImg imgMod1 --inImg imgMod2. \
+			Make sure the reference modality is provided first" (REQUIRED)')
 	ioArgs1.add_argument( "--outImg", default=None, type=str, \
 		help=	'Output image name (REQUIRED)')
 
@@ -92,13 +92,10 @@ def read_flags(argv):
 	ioArgs3 = parser.add_argument_group( 'I/O OPTION 3', 'Batch processing of all images in a folder  (works only for single-modality tasks)')
 	ioArgs3.add_argument( "--inDir", default=None, type=str, \
 			help=	'Input folder name (REQUIRED)')
-
 	ioArgs3.add_argument( "--outDir", default=None, type=str, \
 		help=	'Output folder name (REQUIRED)')
-	
 	ioArgs3.add_argument( "--inSuff", default='.nii.gz', type=str, \
 		help='Input image suffix (default: .nii.gz)')
-	
 	ioArgs3.add_argument( "--outSuff", default='_SEG.nii.gz', type=str, \
 		help="Output image suffix  (default: _SEG.nii.gz)")
 
@@ -108,14 +105,11 @@ def read_flags(argv):
 
 	otherArgs.add_argument( "--batch", default=64, type=int, \
 		help="Batch size  (default: 64)" )
-
 	otherArgs.add_argument( "--probs", default=False, action="store_true", \
 		help=	'Flag to indicate whether to save a probability map for \
 			each segmentation label (default: False)')
-
 	otherArgs.add_argument( "--nJobs", default=None, type=int, \
 		help="Number of jobs/threads (default: automatically determined)" )
-	
 	otherArgs.add_argument( "--tmpDir", default=None, type=str, \
                 help=	'Absolute path to the temporary directory. If not provided, \
 			temporary directory will be created automatically and will be \
