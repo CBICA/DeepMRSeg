@@ -5,8 +5,10 @@ __EXEC_NAME__	 = "deepmrseg_test"
 
 import os as _os
 import sys as _sys
-import json as _json
 
+_os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # any of {'0': DEBUG, '1': INFO, '2': WARNING, '3': ERROR}
+
+import json as _json
 import tensorflow as _tf
 import numpy as _np
 import platform as _platform

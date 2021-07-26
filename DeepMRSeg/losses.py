@@ -171,6 +171,25 @@ def mae_loss( y_true, y_pred, gamma=1 ):
 
 #DEF
 #@_tf.function
+def expmae_loss( y_true, y_pred, gamma=1 ):
+	"""For a given pair of y_true and y_pred, calculate exp(MAE)-1.
+
+	Args:
+		y_true: ground truth one_hot encodings of shape (b,x,y,c)
+		y_pred: predicted probabilities of shape (b,x,y,c)
+		gamma: exponent value (default: 1)
+	Returns:
+		expmae_loss: MAE loss of shape (b)
+	"""
+	# Shape: [b,x,y,c]
+	expmae = _tf.math.expm1( EPS + _tf.math.abs( y_true-y_pred ) )	# expm1 = exp(x)-1
+
+	# Shape: [b]
+	return _tf.math.reduce_mean( _tf.math.pow( expmae,gamma ), axis=[1,2,3] )
+#ENDDEF
+
+#DEF
+#@_tf.function
 def cce_loss( y_true, y_pred, gamma=1 ):
 	"""For a given pair of y_true and y_pred, calculate Categorical Cross Entropy.
 
@@ -205,7 +224,8 @@ def combo_loss( y_true,y_pred,gamma=1,alpha=50 ):
 		cce_loss: focal CCE loss of shape (b)
 	"""
 	iou = focal_iou_loss( y_true,y_pred,gamma )
-	mae = mae_loss( y_true,y_pred,gamma )
+#	mae = mae_loss( y_true,y_pred,gamma )
+	mae = expmae_loss( y_true,y_pred,gamma )
 	cce = cce_loss( y_true,y_pred,gamma )
 
 	total_loss = alpha * iou + (100-alpha) * (mae + cce)

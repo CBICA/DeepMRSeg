@@ -6,6 +6,10 @@ __EXEC_NAME__	 = "deepmrseg_train"
 
 import os as _os
 import sys as _sys
+
+_sys.path.append( _os.path.dirname( _sys.argv[0] ) )
+_os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'  # any of {'0': DEBUG, '1': INFO, '2': WARNING, '3': ERROR}
+
 import json as _json
 import time as _time
 import signal as _signal
@@ -13,10 +17,9 @@ import tensorflow as _tf
 import numpy as _np
 import platform as _platform
 
-_sys.path.append( _os.path.dirname( _sys.argv[0] ) )
+
 
 from . import losses
-
 from .data_io import check_files, extract_pkl
 from .models import create_model
 from .data_augmentation import data_reader
@@ -49,7 +52,7 @@ def read_flags():
 #	INPUT LIST
 #	==========
 	inputArgs = parser.add_argument_group( 'REQUIRED INPUT ARGS' )
-	inputArgs.add_argument( "--sList", default=None, type=str, required=True, \
+	inputArgs.add_argument( "--sList", default=None, type=str, \
 				help="absolute path to the subject list for training")
 	inputArgs.add_argument( "--idCol", default=None, type=str, \
 				help="id column name (e.g.: 'ID')" )
@@ -81,8 +84,8 @@ def read_flags():
 				help="number of classes to be considered in the input")
 	inpArgs.add_argument( "--label_balance", default=1, type=int, \
 				help="weights to be used for positive/foreground labels" )
-	inpArgs.add_argument( "--rescale", default='norm', type=str, \
-				help="rescale method, choose from { minmax, norm }")
+	inpArgs.add_argument( "--rescale", default='norm', type=str, choices=['minmax','norm'], \
+				help="rescale method")
 	inpArgs.add_argument( "--xy_width", default=320, type=int, \
 				help="xy dimensions of the input patches. \
 					Determines how much each slice needs to be padded in the xy dimension. \
@@ -96,21 +99,19 @@ def read_flags():
 #	TRAINING
 #	========
 	trainArgs = parser.add_argument_group( 'TRAINING' )
-	trainArgs.add_argument( "--arch", default='ResNet', type=str, \
-				help="UNet architecture to be used choose from { UNet_vanilla, UNet_vanilla_bn, ResNet, ResInc, }" )
+	trainArgs.add_argument( "--arch", default='ResNet', type=str, choices=['UNet_vanilla','UNet_vanilla_norm','ResNet','ResInc'], \
+				help="UNet architecture to be used" )
 	trainArgs.add_argument( "--num_epochs", default=10, type=int, \
 				help="number of training epochs" )
 	trainArgs.add_argument( "--min_epochs", default=5, type=int, \
 				help="minimum number of training epochs to run before evaluating \
 					early stopping criteria")
-	trainArgs.add_argument( "--optimizer", default='RMSProp', type=str, \
-				help="optimizer to be used for the first part of the training \
-					 choose from { 'Adam', 'RMSProp', 'SGD', 'Momentum' }")
+	trainArgs.add_argument( "--optimizer", default='Adam', type=str, choices=['Adam','RMSProp','SGD','Momentum'], \
+				help="optimizer to be used")
 	trainArgs.add_argument( "--learning_rate", default=0.05, type=float, \
 				help="initial learning rate to be used" )
-	trainArgs.add_argument( "--lr_sch", default='EXP', type=str, \
-				help="learning rate schedule \
-					choose from { EXP, PLAT }" )
+	trainArgs.add_argument( "--lr_sch", default='EXP', type=str, choices=['EXP','PLAT'], \
+				help="learning rate schedule" )
 	trainArgs.add_argument( "--decay", default=0.9, type=float, \
 				help="exponential_decay for the learning rate" )
 	trainArgs.add_argument( "--patience", default=5, type=int, \
@@ -133,9 +134,8 @@ def read_flags():
 				help="use deep supervision of the network")
 	trainArgs.add_argument( "--lite", default=False, action="store_true", \
 				help="use the lite version of the network")
-	trainArgs.add_argument( "--norm", default='batch', type=str, \
-				help="normalization layer to use \
-					 choose from { 'batch', 'instance' }")
+	trainArgs.add_argument( "--norm", default='batch', type=str, choices=['batch','instance'], \
+				help="normalization layer to use")
 	trainArgs.add_argument( "--alpha", default=50, type=float, \
 				help="weighted loss of the form \
 					loss = alpha*dice_loss + (100-alpha)*(mae+bce)")
@@ -152,6 +152,7 @@ def read_flags():
 
 #	FLAGS
 #	=====
+
 	### Read config file first, if provided
 	if configarg.config:
 		# Read the JSON config file
@@ -443,7 +444,7 @@ class Train(object):
 					print( "\t\titerations : %d, time per 1000 iterations: %.2f mins" % \
 									( i, timeperiter ) )
 
-					print( "\t\t\t training metrics \t: mIOU: %.4f, Loss: %.4f (%.4f,%.4f,%.4f)" \
+					print( "\t\t\t training metrics \t: mIOU: %.4f, Loss: %.4f (%.1E,%.1E,%.1E)" \
 							% ( self.iou_train.result(), \
 							self.epoch_train_loss_avg.result(), \
 							self.epoch_train_ioul_avg.result(), \
@@ -506,14 +507,14 @@ class Train(object):
 			print( "\n\tepoch : %d, time/epoch: %.2f mins, learning rates: %.1E" \
 					% ( epoch, timeperepoch, current_lr ) )
 
-			print( "\t\t training metrics \t: mIOU: %.4f (%.4f), Loss: %.4f (%.4f,%.4f,%.4f)" \
+			print( "\t\t training metrics \t: mIOU: %.4f (%.4f), Loss: %.4f (%.1E,%.1E,%.1E)" \
 					% ( self.iou_train.result(), accu_train_recent.mean(), \
 					self.epoch_train_loss_avg.result(), \
 					self.epoch_train_ioul_avg.result(), \
 					self.epoch_train_mael_avg.result(), \
 					self.epoch_train_bcel_avg.result() ) )
 
-			print( "\t\t validation metrics \t: mIOU: %.4f (%.4f), Loss: %.4f (%.4f,%.4f,%.4f) ( %.4f, %.4f )\n" \
+			print( "\t\t validation metrics \t: mIOU: %.4f (%.4f), Loss: %.4f (%.1E,%.1E,%.1E) ( %.4f, %.4f )\n" \
 					% ( self.iou_val.result(), accu_val_recent.mean(), \
 					self.epoch_val_loss_avg.result(), \
 					self.epoch_val_ioul_avg.result(), \
@@ -708,31 +709,34 @@ def _main():
 	print("Patience Param \t: %d" % (FLAGS.patience))
 	print("Normalization \t: %s\n" % (FLAGS.norm))
 
-	### Create model dir
-	if not _os.path.isdir( FLAGS.mdlDir ):
-		_os.makedirs( FLAGS.mdlDir )
+	### Create model/configs dir
+	if not _os.path.isdir( _os.path.join( FLAGS.mdlDir + '/configs' ) ):
+		_os.makedirs( _os.path.join( FLAGS.mdlDir + '/configs' ) )
 
 	### Create a config file containing training parameters
 	# dump to json file
 	train_config_json = _json.dumps( FLAGS.__dict__,sort_keys=True,indent=4 )
 	#WITH
-	with open( _os.path.join( FLAGS.mdlDir + '/train_config.json' ), "w" ) as outfile:
+	with open( _os.path.join( FLAGS.mdlDir + '/configs/train_config.json' ), "w" ) as outfile:
 		outfile.write( train_config_json )
 	#ENDWITH
 
 	### Create a config file for testing
 	test_config = {}
 	#FOR KEYS
-	for k in [ 'num_classes', 'reorient', 'rescale', 'ressize', 'roi', 'xy_width' ]:
+	for k in [ 'refMod', 'otherMods', 'num_classes', 'reorient', 'rescale', 'ressize', 'roi', 'xy_width' ]:
 		test_config[k] = FLAGS.__dict__[k]
 	#ENDFOR KEYS
 	
 	# dump to json file
 	test_config_json = _json.dumps( test_config,sort_keys=True,indent=4 )
 	#WITH
-	with open( _os.path.join( FLAGS.mdlDir + '/test_config.json' ), "w" ) as outfile:
+	with open( _os.path.join( FLAGS.mdlDir + '/configs/test_config.json' ), "w" ) as outfile:
 		outfile.write( test_config_json )
 	#ENDWITH
+
+	### Save the ROI csv file to the configs/ folder
+	_shutil.copyfile( FLAGS.roi, _os.path.join( FLAGS.mdlDir + '/configs/ROI_Indices.csv') )
 
 	### Read subject list file
 	print("Reading the input subject list and running sanity checks on the files")
@@ -772,9 +776,9 @@ def _main():
 	print("Splitting the training list into training and validation")
 	_sys.stdout.flush()
 
-#	******************************************
-#	* COMMENTED OUT ONLY FOR EXPERIMENTATION *
-#	******************************************
+#	****************************************
+#	* COMMENT OUT ONLY FOR EXPERIMENTATION *
+#	****************************************
 	# Randomize list
 	_shuffle( all_sublist )
 
