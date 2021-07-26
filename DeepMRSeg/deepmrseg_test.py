@@ -46,9 +46,11 @@ def read_flags(argv):
   {prog} -m /my/models/bmask_mdldir --inImg sub1_T1.nii.gz --outImg sub1_bmaskseg.nii.gz
  
   ## Apply multi-modal (FL and T1) segmentation task on single subject (I/O OPTION 1)
+  ## IMPORTANT NOTE: The order of input images should be the same as the one used in training
   {prog} -m /my/models/wmlesion_mdldir --inImg sub1_FL.nii.gz --inImg sub1_T1.nii.gz --outImg sub1_wmlseg.nii.gz
 
   ## Apply multi-modal segmentation task on multiple images using an image list (I/O OPTION 2)
+  ## IMPORTANT NOTE: The order of input images should be the same as the one used in training
   {prog} -m /my/models/wmlesion_mdldir --sList my_img_list.csv
      with my_img_list.csv:
        ID,FLAIR,T1,OutImg
@@ -79,8 +81,10 @@ def read_flags(argv):
 	ioArgs1 = parser.add_argument_group( 'I/O OPTION 1', 'Single case processing')
 	ioArgs1.add_argument( "--inImg", action='append', default=None, type=str, \
 		help=	'Input image name. For multi-modal tasks, multiple image names \
-			can be entered as "--inImg imgMod1 --inImg imgMod2. \
-			Make sure the reference modality is provided first" (REQUIRED)')
+			can be entered as "--inImg imgMod1 --inImg imgMod2 ... . \
+			The order of input images should be the same as the one used \
+			in training. Please refer to documentation of the specific \
+			model used." (REQUIRED)')
 	ioArgs1.add_argument( "--outImg", default=None, type=str, \
 		help=	'Output image name (REQUIRED)')
 
