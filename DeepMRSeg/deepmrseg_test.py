@@ -573,20 +573,15 @@ def _main_warg(argv):
 		roiIndFile = (_os.path.join(currMdl, 'configs', 'ROI_Indices.csv'))
 		with open(testConf) as f:
 			testconfigflags = _json.load(f)
-		trainflag_orient = testconfigflags['reorient']
-		trainflag_rescale = testconfigflags['rescale']
-		trainflag_ressize = testconfigflags['ressize']
-		trainflag_xy_width = testconfigflags['xy_width']
-		trainflag_num_classes = testconfigflags['num_classes']
 		
 
 		print("\n")
 		print("\n---->	Model " + str(indMdl +1))
 
-		print("\t-->	Rescale Method \t: %s" % (trainflag_rescale))
-		print("\t-->	XY width \t: %d" % (trainflag_xy_width))
-		print("\t-->	Voxel Size \t: %f" % (trainflag_ressize))
-		print("\t-->	Orientation \t: %s" % (trainflag_orient))
+		print("\t-->	Rescale Method \t: %s" % (testconfigflags['rescale']))
+		print("\t-->	XY width \t: %d" % (testconfigflags['xy_width']))
+		print("\t-->	Voxel Size \t: %f" % (testconfigflags['ressize']))
+		print("\t-->	Orientation \t: %s" % (testconfigflags['reorient']))
 
 		_sys.stdout.flush()
 		
@@ -616,12 +611,14 @@ def _main_warg(argv):
 		_sys.stdout.flush()
 
 		# Read column names in input csv file
+		#WITH
 		with open (FLAGS.sList) as f:
 			colNames = next(_csv.reader(f))
 			idCol = colNames[0]
 			refMod = colNames[1]
 			otherMods = colNames[2:-1]
 			outCol = colNames[-1]
+		#ENDWITH
 
 		#WITH OPENFILE
 		with open(FLAGS.sList) as f:
@@ -656,15 +653,18 @@ def _main_warg(argv):
 				if not _os.path.isfile( outImg ):
 					
 					# If there is a single model write the output directly to out image
+					#IF
 					if num_models == 1:
 						outSel = outImg
 						probsSel = FLAGS.probs
 						
 					# If not, create temporary out file for the current model
-					# also probs is set to True, as final mask will be calculated by combining probs from multiple models 
+					# also probs is set to True, as final mask will be calculated 
+					# by combining probs from multiple models 
 					else:
 						outSel = _os.path.join(tmpDir, subId, subId + '_model' + str(indMdl+1) + '_out.nii.gz')
 						probsSel = True
+					#ENDIF
 
 					#### Create output directory if it doesn't exist already
 					##IF
@@ -675,18 +675,19 @@ def _main_warg(argv):
 					print( "\t\t-->	%s" % ( subId ) )
 					_sys.stdout.flush()
 			
+					### Run predictions
 					predict_classes( \
 							refImg=refImg, \
 							otherImg=otherModsFileList, \
-							num_classes=trainflag_num_classes, \
+							num_classes=testconfigflags['num_classes'], \
 							allmodels=allmodels, \
 							roi_indices=roi_indices, \
 							out=outSel, \
 							probs=probsSel, \
-							rescalemethod=trainflag_rescale, \
-							ressize=trainflag_ressize, \
-							orient=trainflag_orient, \
-							xy_width=trainflag_xy_width, \
+							rescalemethod=testconfigflags['rescale'], \
+							ressize=testconfigflags['ressize'], \
+							orient=testconfigflags['reorient'], \
+							xy_width=testconfigflags['xy_width'], \
 							batch_size=FLAGS.batch, \
 							nJobs=nJobs )		
 					
@@ -716,6 +717,7 @@ def _main_warg(argv):
 				subId = row[idCol]
 				outImg = row[outCol]
 
+				#IF
 				if not _os.path.isfile( outImg ):
 
 					# Get image size from the first nii.gz image 
@@ -726,7 +728,7 @@ def _main_warg(argv):
 					im_shape = _nib.load(_os.path.join(tmpDir, subId, f)).get_data().shape
 					
 					# Create array to store output probabilities
-					val_prob = _np.zeros( ( list(im_shape[0:3]) + [trainflag_num_classes] ) )
+					val_prob = _np.zeros( ( list(im_shape[0:3]) + [testconfigflags['num_classes']] ) )
 				
 					# Create output directory if it doesn't exist already
 					##IF
@@ -735,7 +737,7 @@ def _main_warg(argv):
 					#ENDIF
 
 					#FOR
-					for clInd in range(trainflag_num_classes):
+					for clInd in range(testconfigflags['num_classes']):
 
 						clSuff = '_probabilities_' + str(clInd)
 
@@ -745,6 +747,7 @@ def _main_warg(argv):
 							if f.endswith(clSuff + '.nii.gz'):
 								files.append(_os.path.join(tmpDir, subId, f))
 						
+						#IF
 						if len(files)>0:
 							niiTmp = _nib.load(files[0])
 							probOut = niiTmp.get_data()                
@@ -758,7 +761,10 @@ def _main_warg(argv):
 							# Write probabilities
 							if FLAGS.probs:
 								outNii = _nib.Nifti1Image( probOut, niiTmp.affine, niiTmp.header )
-								outNii.to_filename(outImg.replace('.nii.gz', '_probabilities_' + str(clInd) + '.nii.gz'))
+								outNii.to_filename( outImg.replace('.nii.gz', \
+												'_probabilities_' \
+												+ str(clInd) + '.nii.gz') )
+						#ENDIF
 						val_prob[:,:,:,clInd] = probOut
 					#ENDFOR
 
