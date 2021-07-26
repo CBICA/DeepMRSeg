@@ -470,18 +470,18 @@ def _main_warg(argv):
 	print("\nModel dir(s) \t: %s" % (FLAGS.mdlDir))
 	if IOType == 1:
 		print( "\nInput image(s) \t: %s" % (' , '.join(FLAGS.inImg)) )
-		print( "\nOutput image \t: %s" % (FLAGS.outImg) )
+		print( "Output image \t: %s" % (FLAGS.outImg) )
 	if IOType == 2:
 		print( "\nImage List \t: %s" % (FLAGS.sList) )
 	if IOType == 3:
 		print( "\nInput dir \t: %s" % (FLAGS.inDir) )
-		print( "\nOutput dir \t: %s" % (FLAGS.outDir) )
-		print( "\nInput suffix \t: %s" % (FLAGS.outDir) )
-		print( "\nOutput suffix \t: %s" % (FLAGS.outSuff) )
+		print( "Output dir \t: %s" % (FLAGS.outDir) )
+		print( "Input suffix \t: %s" % (FLAGS.outDir) )
+		print( "Output suffix \t: %s" % (FLAGS.outSuff) )
 	print("\nBatch Size \t: %s" % (FLAGS.batch))
-	print("\nOutput probs \t: %d" % (FLAGS.probs))
-	print("\nNumber of jobs \t: %d" % (nJobs))
-	print("\nTemp folder \t: %s" % (tmpDir))
+	print("Output probs \t: %d" % (FLAGS.probs))
+	print("Number of jobs \t: %d" % (nJobs))
+	print("Temp folder \t: %s" % (tmpDir))
 	
 	_sys.stdout.flush()
 	
@@ -587,7 +587,12 @@ def _main_warg(argv):
 		print("\n")
 		print("\n---->	Model " + str(indMdl +1))
 		print("\t-->	Loading all stored models in model path " + str(indMdl+1) + ' : ' + currMdl)
-		print("\t-->	Reorient is : " + trainflag_orient)
+
+		print("\t-->	Rescale Method \t: %s" % (trainflag_rescale))
+		print("\t-->	XY width \t: %d" % (trainflag_xy_width))
+		print("\t-->	Voxel Size \t: %f" % (trainflag_ressize))
+		print("\t-->	Orientation \t: %s" % (trainflag_orient))
+
 		_sys.stdout.flush()
 		
 		allmodels = []
