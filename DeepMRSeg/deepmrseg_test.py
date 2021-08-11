@@ -255,11 +255,11 @@ def save_output_probs( ens_ref,ind,roi,inImg,out ):
 	import nibabel as _nib
 
 	outImgDat = ens_ref[:,:,:,ind].copy()
-	outImgDat = outImgDat.astype('float16') / 255
+	outImgDat = outImgDat.astype('float32') / 255
 	outImgDat = _np.where( outImgDat<0.01, 0, outImgDat )
 
 	outImgDat_img = _nib.Nifti1Image( outImgDat, inImg.affine, inImg.header )
-	outImgDat_img.set_data_dtype( 'float16' )
+	outImgDat_img.set_data_dtype( 'float32' )
 	outImgDat_img.to_filename( _os.path.join( out[:-7] + '_probabilities_' + str(roi) + '.nii.gz' ) )
 #ENDDEF
 
