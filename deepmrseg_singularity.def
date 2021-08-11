@@ -1,0 +1,64 @@
+Bootstrap: docker
+From: tensorflow/tensorflow:2.3.3-gpu-jupyter
+
+%help
+
+	To install python libraries after this image is built, create a virtual environment that uses the system packages with `virtualenv --system-site-packages venv && source venv/bin/activate`, then use `pip` as usual.
+
+
+%environment
+
+%post
+	NOW=`env TZ=America/New_York date`
+	echo "export NOW=\"${NOW}\"" >> $SINGULARITY_ENVIRONMENT
+
+%runscript
+	echo "\n\nContainer was created: $NOW"
+	echo "Python version: `python --version`"
+	echo "Python exec: `which python`"
+	echo "Arguments received: $*\n\n"
+	exec "$@"
+
+
+%post
+	export DEBIAN_FRONTEND=noninteractive
+	ln -fs /usr/share/zoneinfo/America/New_York /etc/localtime
+	apt-get update
+	apt-get -y install python3-tk --fix-missing
+	
+	# need to create mount point for home dir, scratch
+	mkdir /uufs /scratch
+
+	pip install --upgrade setuptools
+%test
+	# Sanity check that the container is operating
+
+	# Test numpy 
+	python -c "import numpy as np;np.__config__.show()"
+
+	# Ensure that TensorFlow can be imported and session started (session start touches GPU)
+	python -c "import tensorflow as tf;s = tf.constant( 1.0, tf.float32 )"
+
+
+
+###############################
+### DEEPMRSEG
+###############################
+
+%environment        
+
+%post
+        echo "\n\n Installing DeepMRSeg \n\n"
+
+	mkdir -p /opt/cbica/src/deepmrseg \
+	&& cd /opt/cbica/src/deepmrseg \
+	&& git clone https://github.com/CBICA/DeepMRSeg.git \
+	&& cd DeepMRSeg \
+	&& python setup.py install \
+	&& rm -rf /opt/cbica/src/deepmrseg \
+	&& rmdir /opt/cbica/src /opt/cbica
+
+%test
+        echo "\nTesting DeepMRSeg exec(s)"
+        which deepmrseg_train
+	deepmrseg_train
