@@ -211,11 +211,12 @@ def load_model( models,cp ):
 def run_model( im_dat, num_classes, allmodels, bs ):
 
 	### Create array to store output probabilities
-	val_prob = _np.zeros( ( im_dat.shape[0:3] + (num_classes,len(allmodels)) ) )
+	# to reduce the memory requirement when working with many output classes
+	# shape: [z,x,y,c]
+	val_prob = _np.zeros( ( im_dat.shape[0:3] + (num_classes,) ),dtype='uint8' )
 
 	### Create a tf Dataset from im_dat
 	im_dat_ds = _tf.data.Dataset.from_tensor_slices( (im_dat) ).batch( bs )
-	
 
 	# Launch testing
 	# FOR EACH MODEL
@@ -224,14 +225,13 @@ def run_model( im_dat, num_classes, allmodels, bs ):
 		# FOR EACH BATCH OF SLICES
 		for one_batch in im_dat_ds:
 			bs = one_batch.shape[0]
-			val_prob[i:i+bs,:,:,:,c] = mod.run( one_batch )
+			val_prob[i:i+bs,:,:,:] += ( mod.run( one_batch ) / len(allmodels) * 255 ).astype('uint8')
 			i += bs
 		# ENDFOR EACH BATCH OF SLICES
 	# ENDFOR EACH MODEL
 
 	### Reshuffle predictions from [z,x,y,c,m] -> [x,y,z,c,m]
-#	ens = _np.moveaxis( val_prob,0,2 ).astype('float32').mean( axis=-1 )
-	ens = _np.moveaxis( val_prob,0,2 ).mean( axis=-1 ).astype('float32')
+	ens = _np.moveaxis( val_prob,0,2 )
 	del val_prob, im_dat_ds
 
 	return ens
@@ -258,6 +258,7 @@ def save_output_probs( ens_ref,ind,roi,inImg,out ):
 	import nibabel as _nib
 
 	outImgDat = ens_ref[:,:,:,ind].copy()
+	outImgDat = outImgDat.astype('float32') / 255
 	outImgDat = _np.where( outImgDat<0.01, 0, outImgDat )
 
 	outImgDat_img = _nib.Nifti1Image( outImgDat, inImg.affine, inImg.header )
@@ -293,7 +294,7 @@ def save_output( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
 					out_path=None )
 
 	### Re-orient, resample and resize ens to the refImg space
-	ens_ref = _np.zeros( (inImg.shape+(num_classes,)),dtype='float32' )
+	ens_ref = _np.zeros( (inImg.shape+(num_classes,)),dtype='uint8' )
 	#WITH
 	with _TPE( max_workers=nJobs ) as executor:
 		#FOR
@@ -347,6 +348,8 @@ def save_output( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
 def predict_classes( refImg, otherImg, num_classes, allmodels, roi_indices, out=None, probs=False, \
 			rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320, batch_size=64, nJobs=1 ):
 
+	print( "\t\t\t--> Extracting and pre-processing image data" )
+	_sys.stdout.flush()
 	im_dat = extract_data_for_subject( \
 			otherImg=otherImg, \
 			refImg=refImg, \
@@ -355,9 +358,13 @@ def predict_classes( refImg, otherImg, num_classes, allmodels, roi_indices, out=
 			xy_width=xy_width, \
 			rescalemethod=rescalemethod )
 
+	print( "\t\t\t--> Running inference" )
+	_sys.stdout.flush()
 	ens = run_model( im_dat=im_dat, num_classes=num_classes, \
 			allmodels=allmodels, bs=batch_size )
 
+	print( "\t\t\t--> Saving output" )
+	_sys.stdout.flush()
 	#IF OUTFILE PROVIDED
 	if out:
 		save_output( ens, refImg, num_classes, roi_indices, out=out, probs=probs, \
@@ -576,20 +583,15 @@ def _main_warg(argv):
 		roiIndFile = (_os.path.join(currMdl, 'configs', 'ROI_Indices.csv'))
 		with open(testConf) as f:
 			testconfigflags = _json.load(f)
-		trainflag_orient = testconfigflags['reorient']
-		trainflag_rescale = testconfigflags['rescale']
-		trainflag_ressize = testconfigflags['ressize']
-		trainflag_xy_width = testconfigflags['xy_width']
-		trainflag_num_classes = testconfigflags['num_classes']
 		
 
 		print("\n")
 		print("\n---->	Model " + str(indMdl +1))
 
-		print("\t-->	Rescale Method \t: %s" % (trainflag_rescale))
-		print("\t-->	XY width \t: %d" % (trainflag_xy_width))
-		print("\t-->	Voxel Size \t: %f" % (trainflag_ressize))
-		print("\t-->	Orientation \t: %s" % (trainflag_orient))
+		print("\t-->	Rescale Method \t: %s" % (testconfigflags['rescale']))
+		print("\t-->	XY width \t: %d" % (testconfigflags['xy_width']))
+		print("\t-->	Voxel Size \t: %f" % (testconfigflags['ressize']))
+		print("\t-->	Orientation \t: %s" % (testconfigflags['reorient']))
 
 		_sys.stdout.flush()
 		
@@ -619,12 +621,14 @@ def _main_warg(argv):
 		_sys.stdout.flush()
 
 		# Read column names in input csv file
+		#WITH
 		with open (FLAGS.sList) as f:
 			colNames = next(_csv.reader(f))
 			idCol = colNames[0]
 			refMod = colNames[1]
 			otherMods = colNames[2:-1]
 			outCol = colNames[-1]
+		#ENDWITH
 
 		#WITH OPENFILE
 		with open(FLAGS.sList) as f:
@@ -659,15 +663,18 @@ def _main_warg(argv):
 				if not _os.path.isfile( outImg ):
 					
 					# If there is a single model write the output directly to out image
+					#IF
 					if num_models == 1:
 						outSel = outImg
 						probsSel = FLAGS.probs
 						
 					# If not, create temporary out file for the current model
-					# also probs is set to True, as final mask will be calculated by combining probs from multiple models 
+					# also probs is set to True, as final mask will be calculated 
+					# by combining probs from multiple models 
 					else:
 						outSel = _os.path.join(tmpDir, subId, subId + '_model' + str(indMdl+1) + '_out.nii.gz')
 						probsSel = True
+					#ENDIF
 
 					#### Create output directory if it doesn't exist already
 					##IF
@@ -678,18 +685,19 @@ def _main_warg(argv):
 					print( "\t\t-->	%s" % ( subId ) )
 					_sys.stdout.flush()
 			
+					### Run predictions
 					predict_classes( \
 							refImg=refImg, \
 							otherImg=otherModsFileList, \
-							num_classes=trainflag_num_classes, \
+							num_classes=testconfigflags['num_classes'], \
 							allmodels=allmodels, \
 							roi_indices=roi_indices, \
 							out=outSel, \
 							probs=probsSel, \
-							rescalemethod=trainflag_rescale, \
-							ressize=trainflag_ressize, \
-							orient=trainflag_orient, \
-							xy_width=trainflag_xy_width, \
+							rescalemethod=testconfigflags['rescale'], \
+							ressize=testconfigflags['ressize'], \
+							orient=testconfigflags['reorient'], \
+							xy_width=testconfigflags['xy_width'], \
 							batch_size=FLAGS.batch, \
 							nJobs=nJobs )		
 					
@@ -721,6 +729,7 @@ def _main_warg(argv):
 				subId = row[idCol]
 				outImg = row[outCol]
 
+				#IF
 				if not _os.path.isfile( outImg ):
 
 					# Get image size from the first nii.gz image 
@@ -731,7 +740,7 @@ def _main_warg(argv):
 					im_shape = _nib.load(_os.path.join(tmpDir, subId, f)).get_data().shape
 					
 					# Create array to store output probabilities
-					val_prob = _np.zeros( ( list(im_shape[0:3]) + [trainflag_num_classes] ) )
+					val_prob = _np.zeros( ( list(im_shape[0:3]) + [testconfigflags['num_classes']] ) )
 				
 					# Create output directory if it doesn't exist already
 					##IF
@@ -751,6 +760,7 @@ def _main_warg(argv):
 							if f.endswith(clSuff + '.nii.gz'):
 								files.append(_os.path.join(tmpDir, subId, f))
 						
+						#IF
 						if len(files)>0:
 							niiTmp = _nib.load(files[0])
 							probOut = niiTmp.get_data()                
@@ -766,6 +776,7 @@ def _main_warg(argv):
 								outNii = _nib.Nifti1Image( probOut, niiTmp.affine, niiTmp.header )
 								outNii.to_filename(outImg.replace('.nii.gz', '_probabilities_' + str(clInd) + '.nii.gz'))
 						val_prob[:,:,:,ind] = probOut
+						#ENDIF
 					#ENDFOR
 
 					### Get preds from prob matrix
