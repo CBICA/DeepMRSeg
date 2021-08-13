@@ -708,6 +708,8 @@ def _main_warg(argv):
 		print("\n---->	Creating final predictions by combining output from each model")
 		_sys.stdout.flush()
 		
+		clInds = _np.array(roi_indices)[:,1]
+		
 		#WITH OPENFILE
 		with open(FLAGS.sList) as f:
 			reader = _csv.DictReader( f )
@@ -738,7 +740,8 @@ def _main_warg(argv):
 					#ENDIF
 
 					#FOR
-					for clInd in range(trainflag_num_classes):
+					for i in range( len(roi_indices) ):
+						ind,clInd = roi_indices[i]
 
 						clSuff = '_probabilities_' + str(clInd)
 
@@ -762,11 +765,11 @@ def _main_warg(argv):
 							if FLAGS.probs:
 								outNii = _nib.Nifti1Image( probOut, niiTmp.affine, niiTmp.header )
 								outNii.to_filename(outImg.replace('.nii.gz', '_probabilities_' + str(clInd) + '.nii.gz'))
-						val_prob[:,:,:,clInd] = probOut
+						val_prob[:,:,:,ind] = probOut
 					#ENDFOR
 
 					### Get preds from prob matrix
-					val_bin = _np.argmax( val_prob, axis=-1 )
+					val_bin = clInds[_np.argmax( val_prob, axis=-1 )]
 
 					# Write binary mask
 					outNii = _nib.Nifti1Image( val_bin, niiTmp.affine, niiTmp.header )
