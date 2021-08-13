@@ -208,11 +208,12 @@ def load_model( models,cp ):
 def run_model( im_dat, num_classes, allmodels, bs ):
 
 	### Create array to store output probabilities
-	val_prob = _np.zeros( ( im_dat.shape[0:3] + (num_classes,len(allmodels)) ) )
+	# to reduce the memory requirement when working with many output classes
+	# shape: [z,x,y,c]
+	val_prob = _np.zeros( ( im_dat.shape[0:3] + (num_classes,) ),dtype='uint8' )
 
 	### Create a tf Dataset from im_dat
 	im_dat_ds = _tf.data.Dataset.from_tensor_slices( (im_dat) ).batch( bs )
-	
 
 	# Launch testing
 	# FOR EACH MODEL
@@ -221,14 +222,13 @@ def run_model( im_dat, num_classes, allmodels, bs ):
 		# FOR EACH BATCH OF SLICES
 		for one_batch in im_dat_ds:
 			bs = one_batch.shape[0]
-			val_prob[i:i+bs,:,:,:,c] = mod.run( one_batch )
+			val_prob[i:i+bs,:,:,:] += ( mod.run( one_batch ) / len(allmodels) * 255 ).astype('uint8')
 			i += bs
 		# ENDFOR EACH BATCH OF SLICES
 	# ENDFOR EACH MODEL
 
 	### Reshuffle predictions from [z,x,y,c,m] -> [x,y,z,c,m]
-#	ens = _np.moveaxis( val_prob,0,2 ).astype('float32').mean( axis=-1 )
-	ens = _np.moveaxis( val_prob,0,2 ).mean( axis=-1 ).astype('float32')
+	ens = _np.moveaxis( val_prob,0,2 )
 	del val_prob, im_dat_ds
 
 	return ens
@@ -255,6 +255,7 @@ def save_output_probs( ens_ref,ind,roi,inImg,out ):
 	import nibabel as _nib
 
 	outImgDat = ens_ref[:,:,:,ind].copy()
+	outImgDat = outImgDat.astype('float32') / 255
 	outImgDat = _np.where( outImgDat<0.01, 0, outImgDat )
 
 	outImgDat_img = _nib.Nifti1Image( outImgDat, inImg.affine, inImg.header )
@@ -290,7 +291,7 @@ def save_output( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
 					out_path=None )
 
 	### Re-orient, resample and resize ens to the refImg space
-	ens_ref = _np.zeros( (inImg.shape+(num_classes,)),dtype='float32' )
+	ens_ref = _np.zeros( (inImg.shape+(num_classes,)),dtype='uint8' )
 	#WITH
 	with _TPE( max_workers=nJobs ) as executor:
 		#FOR
@@ -344,6 +345,8 @@ def save_output( ens, refImg, num_classes, roi_indices, out=None, probs=False, \
 def predict_classes( refImg, otherImg, num_classes, allmodels, roi_indices, out=None, probs=False, \
 			rescalemethod='minmax', ressize=float(1), orient='LPS', xy_width=320, batch_size=64, nJobs=1 ):
 
+	print( "\t\t\t--> Extracting and pre-processing image data" )
+	_sys.stdout.flush()
 	im_dat = extract_data_for_subject( \
 			otherImg=otherImg, \
 			refImg=refImg, \
@@ -352,9 +355,13 @@ def predict_classes( refImg, otherImg, num_classes, allmodels, roi_indices, out=
 			xy_width=xy_width, \
 			rescalemethod=rescalemethod )
 
+	print( "\t\t\t--> Running inference" )
+	_sys.stdout.flush()
 	ens = run_model( im_dat=im_dat, num_classes=num_classes, \
 			allmodels=allmodels, bs=batch_size )
 
+	print( "\t\t\t--> Saving output" )
+	_sys.stdout.flush()
 	#IF OUTFILE PROVIDED
 	if out:
 		save_output( ens, refImg, num_classes, roi_indices, out=out, probs=probs, \
