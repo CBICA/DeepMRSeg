@@ -75,7 +75,7 @@ Alternatively, we provide a simplified interface for the application of a specif
 deepmrseg_apply
 ```
 
-Note that _deepmrseg_apply_ is a wrapper to _deepmrseg_test_, which calls it with a pre-defined model automatically downloaded using _deepmrseg_loadmodel_.
+Note that _deepmrseg_apply_ is a wrapper to _deepmrseg_test_, which calls it with a pre-defined model automatically downloaded using _deepmrseg_downloadmodel_.
 
 #### Examples:
 
@@ -84,33 +84,26 @@ We provide here few examples using minimal argument sets as a quick reference. T
 Please see the user manual (or call the command with the _-h_ option) for details of the complete command line arguments for _deepmrseg_train_ and _deepmrseg_test_.
 
 ```
-# Download pre-trained brainmask segmentation model
-deepmrseg_downloadmodel --task brainmask
+# Download pre-trained models
+deepmrseg_downloadmodel --model dlicv 		## Tissue segmentation model
+deepmrseg_downloadmodel --model wmlesion  	## ROI segmentation model
 
-# Download pre-trained WM lesion segmentation model
-deepmrseg_downloadmodel --task wmlesion
+# Segment single subject (single-modality task)
+deepmrseg_apply --model dlicv --inImg subj1_T1.nii.gz --outImg subj1_T1_DLICV.nii.gz     
 
-# Process single subject (brain mask segmentation)
-deepmrseg_apply --task brainmask --inImg subj1_T1.nii.gz --outImg subj1_T1_BRAIN.nii.gz     
-
-# Process single subject (WM lesion segmentation)
-#   WM lesion segmentation model requires both FL and T1 scans 
+# Segment single subject (multi-modality task)
 #   Img names for different modalities are entered as repeated args in the same order
 #   used in model training
-deepmrseg_apply --task wmlesion --inImg subj1_FL.nii.gz --inImg subj1_T1.nii.gz --outImg subj1_T1_WMLES.nii.gz     
+deepmrseg_apply --model wmlesion --inImg subj1_FL.nii.gz --inImg subj1_T1.nii.gz --outImg subj1_T1_WMLES.nii.gz     
 
 # Batch processing of multiple subjects using a subject list
-#   User provides a csv file with columns: ID,InputT1,OutputImage
-deepmrseg_apply --task brainmask --sList subjectList.csv
-
-# Batch processing of multiple subjects using a subject list
-#   WM lesion segmentation model requires both FL and T1 scans 
-#   User provides a csv file with columns: ID,InputFL,InputT1,OutputImage
-deepmrseg_apply --task wmlesion --sList subjectList.csv
+#   User provides a csv file with columns: ID,InputMod1,InputMod2,...,OutputImage
+deepmrseg_apply --model dlicv --sList subjectList.csv
 
 # Batch processing of multiple subjects in input folder 
 #   Testing is applied individually to all images with the given suffix in the input folder
-deepmrseg_apply --task brainmask --inDir myindir --outDir myoutdir --inSuff _T1.nii.gz --outSuff _BRAIN
+deepmrseg_apply --model dlicv --inDir myindir --outDir myoutdir --inSuff _T1.nii.gz --outSuff _DLICV.nii.gz
+
 ```
 
 ## License

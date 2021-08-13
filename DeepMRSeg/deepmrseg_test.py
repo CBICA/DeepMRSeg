@@ -482,7 +482,7 @@ def _main_warg(argv):
 	if IOType == 3:
 		print( "\nInput dir \t: %s" % (FLAGS.inDir) )
 		print( "Output dir \t: %s" % (FLAGS.outDir) )
-		print( "Input suffix \t: %s" % (FLAGS.outDir) )
+		print( "Input suffix \t: %s" % (FLAGS.inSuff) )
 		print( "Output suffix \t: %s" % (FLAGS.outSuff) )
 	print("\nBatch Size \t: %s" % (FLAGS.batch))
 	print("Output probs \t: %d" % (FLAGS.probs))

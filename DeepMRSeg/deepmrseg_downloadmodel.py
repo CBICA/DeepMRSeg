@@ -15,9 +15,10 @@ mdlurl = 'https://github.com/CBICA/DeepMRSeg-Models/raw/main/models'
 
 modelDict = {}
 modelDict['dlicv'] = mdlurl + '/DLICV/DeepMRSeg_DLICV_v1.0.zip'
+modelDict['muse'] = mdlurl + '/MUSE/DeepMRSeg_MUSE_v1.0.zip'
+modelDict['tissueseg'] = mdlurl + '/TissueSeg/DeepMRSeg_TissueSeg_v1.0.zip'
 
 ##############################################################
-
 
 ## Path to saved models
 DEEPMRSEG = _os.path.expanduser(_os.path.join('~', '.deepmrseg'))
@@ -33,8 +34,8 @@ def _main():
 	descTxt = '{prog} downloads pre-trained models for DeepMRSeg'.format(prog=exeName)
 
 	epilogTxt = '''Example:
-  ## Download brain mask model
-  {prog} --model bmask
+  ## Download tissue segmentation model
+  {prog} --model tissueseg
   '''.format(prog=exeName)
 
 	parser = _argparse.ArgumentParser( formatter_class=_argparse.RawDescriptionHelpFormatter, \
