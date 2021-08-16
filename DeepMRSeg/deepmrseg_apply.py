@@ -41,10 +41,10 @@ def read_flags(argv):
 	
   ## Apply dlicv model on single image (I/O OPTION 1)
   deepmrseg_downloadmodel --model dlicv
-  {prog} --model dlicv --inImg sub1_T1.nii.gz --outImg sub1_DLICV.nii.gz
+  {prog} --task dlicv --inImg sub1_T1.nii.gz --outImg sub1_DLICV.nii.gz
  
   ## Apply dlicv model on multiple subjects using an image list (I/O OPTION 2)
-  {prog} --model dlicv --sList my_img_list.csv
+  {prog} --task dlicv --sList my_img_list.csv
      with my_img_list.csv:
        ID,T1,OutImg
        sub1,/my/indir/sub1_T1.nii.gz,/my/outdir/sub1_DLICV.nii.gz
@@ -52,7 +52,7 @@ def read_flags(argv):
        ...
      
   ## Apply dlicv model on all T1 images in the input folder (I/O OPTION 3)
-  {prog} --model dlicv --inDir /my/indir --outDir /my/outdir --inSuff _T1.nii.gz --outSuff _DLICV.nii.gz
+  {prog} --task dlicv --inDir /my/indir --outDir /my/outdir --inSuff _T1.nii.gz --outSuff _DLICV.nii.gz
  
   '''.format(prog=exeName)
 
@@ -62,7 +62,7 @@ def read_flags(argv):
 #	TASK/MODEL
 #	===========
 	dirArgs = parser.add_argument_group( 'MODEL')
-	dirArgs.add_argument( "--model", default=None, type=str, \
+	dirArgs.add_argument( "--task", default=None, type=str, \
 		help=	'Name of the segmentation task. Options are: ' \
 			+ '[' + ', '.join(modelDict.keys()) + ']. (REQUIRED)')
 	
@@ -129,14 +129,14 @@ def verify_flags(FLAGS, parser):
 
 	##################################################
 	### Check required args
-	if FLAGS.model is None:
+	if FLAGS.task is None:
 		parser.print_help(_sys.stderr)
 		print('ERROR: Missing required arg --model')
 		_sys.exit(1)
 
-	if FLAGS.model not in modelDict.keys():
+	if FLAGS.task not in modelDict.keys():
 		parser.print_help(_sys.stderr)
-		print('ERROR: Task not found: ' + FLAGS.model)
+		print('ERROR: Task not found: ' + FLAGS.task)
 		_sys.exit(1)
 	
 	##################################################
@@ -174,22 +174,22 @@ def _main():
 	FLAGS,parser = read_flags(argv)
 	verify_flags(FLAGS, parser)
 
-	if FLAGS.model == 'tissueseg':
+	if FLAGS.task == 'tissueseg':
 		## Add models in 1 orientation only
 		argv = argv[3:]
 		argv.append('--mdlDir')
-		argv.append(_os.path.join(modelDict[FLAGS.model], 'LPS'))
+		argv.append(_os.path.join(modelDict[FLAGS.task], 'LPS'))
 		print(argv)
 		#print(argsExt)
 		
 		print('Calling deepmrseg_test')
 		deepmrseg_test._main_warg(argv0 + argv)
 		
-	if FLAGS.model == 'muse':
+	if FLAGS.task == 'muse':
 		## Add models in 1 orientation only
 		argv = argv[3:]
 		argv.append('--mdlDir')
-		argv.append(_os.path.join(modelDict[FLAGS.model], 'LPS'))
+		argv.append(_os.path.join(modelDict[FLAGS.task], 'LPS'))
 		print(argv)
 		#print(argsExt)
 		
@@ -203,20 +203,20 @@ def _main():
 		print('Calling deepmrseg_test')
 		deepmrseg_test._main_warg(argv0 + argv)
 		
-	if FLAGS.model == 'wmlesion':
-		print('Model for task not trained yet, aborting: ' + FLAGS.model)
+	if FLAGS.task == 'wmlesion':
+		print('Model for task not trained yet, aborting: ' + FLAGS.task)
 		_sys.exit(1)
 
-	if FLAGS.model == 'dlicv':
+	if FLAGS.task == 'dlicv':
 		
 		## Add models in 3 orientation		
 		argv = argv[3:]
 		argv.append('--mdlDir')
-		argv.append(_os.path.join(modelDict[FLAGS.model], 'LPS'))
+		argv.append(_os.path.join(modelDict[FLAGS.task], 'LPS'))
 		argv.append('--mdlDir')
-		argv.append(_os.path.join(modelDict[FLAGS.model], 'PSL'))
+		argv.append(_os.path.join(modelDict[FLAGS.task], 'PSL'))
 		argv.append('--mdlDir')
-		argv.append(_os.path.join(modelDict[FLAGS.model], 'SLP'))
+		argv.append(_os.path.join(modelDict[FLAGS.task], 'SLP'))
 		print(argv)
 		#print(argsExt)
 		

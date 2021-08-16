@@ -81,30 +81,49 @@ Note that _deepmrseg_apply_ is a wrapper to _deepmrseg_test_, which calls it wit
 
 We provide here few examples using minimal argument sets as a quick reference. These examples also show 3 possible I/O options provided for different use cases (single subject, batch processing using an image list and batch processing of images in a folder).
 
-Please see the user manual (or call the command with the _-h_ option) for details of the complete command line arguments for _deepmrseg_train_ and _deepmrseg_test_.
+##### Testing:
+
+Quick application on single subject using the wrapper scripts and a pre-trained model:
 
 ```
-# Download pre-trained models
-deepmrseg_downloadmodel --model dlicv 		## Tissue segmentation model
-deepmrseg_downloadmodel --model wmlesion  	## ROI segmentation model
+# Download the pre-trained ICV segmentation model
+deepmrseg_downloadmodel --model dlicv  
 
-# Segment single subject (single-modality task)
-deepmrseg_apply --model dlicv --inImg subj1_T1.nii.gz --outImg subj1_T1_DLICV.nii.gz     
+# Segment image
+deepmrseg_apply --task dlicv --inImg subj1_T1.nii.gz --outImg subj1_T1_DLICV.nii.gz
+```
 
-# Segment single subject (multi-modality task)
-#   Img names for different modalities are entered as repeated args in the same order
-#   used in model training
-deepmrseg_apply --model wmlesion --inImg subj1_FL.nii.gz --inImg subj1_T1.nii.gz --outImg subj1_T1_WMLES.nii.gz     
+Quick application for batch processing using an image list: 
 
-# Batch processing of multiple subjects using a subject list
+```
 #   User provides a csv file with columns: ID,InputMod1,InputMod2,...,OutputImage
-deepmrseg_apply --model dlicv --sList subjectList.csv
+deepmrseg_apply --task dlicv --sList subjectList.csv
+```
 
-# Batch processing of multiple subjects in input folder 
-#   Testing is applied individually to all images with the given suffix in the input folder
-deepmrseg_apply --model dlicv --inDir myindir --outDir myoutdir --inSuff _T1.nii.gz --outSuff _DLICV.nii.gz
+Quick application for batch processing of all images in a folder:
 
 ```
+#   Testing is applied individually to all images with the given suffix in the input folder
+deepmrseg_apply --task dlicv --inDir myindir --outDir myoutdir --inSuff _T1.nii.gz --outSuff _DLICV.nii.gz
+
+```
+
+Segmentation using the deepmrseg_test command:
+```
+#    
+deepmrseg_test --mdldir my/path/to/pretrained/model --sList subjectList.csv
+```
+Please see the user manual (or call the command with the -h option) for details of the complete command line arguments for deepmrseg_test.
+
+##### Training
+
+Training a new model using the deepmrseg_train command:
+```
+#    
+deepmrseg_train --sList subjectList.csv --mdlDir my/path/to/output/model 
+```
+Please see the user manual (or call the command with the -h option) for details of the complete command line arguments for deepmrseg_train.
+
 
 ## License
 
