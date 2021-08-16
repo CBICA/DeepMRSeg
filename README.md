@@ -41,7 +41,7 @@ Then follow steps from [direct installation](#direct-installation-at-default-loc
 
 After installation of the package, users can call DeepMRSeg commands on the command prompt (or on Anaconda prompt).
 
-#### Pre-trained models:
+#### Pre-trained models
 
 Pre-trained models for testing are hosted in [DeepMRSeg-Models repository](https://github.com/CBICA/DeepMRSeg-Models). Users can manually download a model from the model repository into a local folder.
 
@@ -51,7 +51,7 @@ Alternatively, the model can be downloaded to a pre-defined local folder (_~/.de
 deepmrseg_downloadmodel
 ```
 
-#### Training and testing:
+#### Training and testing
 
 Users can train their own model using a custom training dataset (training):
 
@@ -67,7 +67,7 @@ deepmrseg_test
 
 Note that _deepmrseg_train_ and _deepmrseg_test_ are generic commands that allow users to run training and testing in an exhaustive way by supplying a set of user arguments.
 
-#### Applying a task:
+#### Applying a task
 
 Alternatively, we provide a simplified interface for the application of a specific segmentation task on user data:
 
@@ -77,11 +77,11 @@ deepmrseg_apply
 
 Note that _deepmrseg_apply_ is a wrapper to _deepmrseg_test_, which calls it with a pre-defined model automatically downloaded using _deepmrseg_downloadmodel_.
 
-#### Examples:
+## Examples
 
 We provide here few examples using minimal argument sets as a quick reference. These examples also show 3 possible I/O options provided for different use cases (single subject, batch processing using an image list and batch processing of images in a folder).
 
-##### Testing:
+#### Testing:
 
 Quick application on single subject using the wrapper scripts and a pre-trained model:
 
@@ -115,7 +115,7 @@ deepmrseg_test --mdldir my/path/to/pretrained/model --sList subjectList.csv
 ```
 Please see the user manual (or call the command with the -h option) for details of the complete command line arguments for deepmrseg_test.
 
-##### Training
+#### Training
 
 Training a new model using the deepmrseg_train command:
 ```
