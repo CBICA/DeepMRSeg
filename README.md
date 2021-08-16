@@ -23,14 +23,14 @@ It may also work on other platforms.
 
 ## Installation Instructions
 
-#### 1) Direct installation at default location 
+### 1) Direct installation at default location 
 ```
 git clone  https://github.com/CBICA/DeepMRSeg.git
 cd DeepMRSeg
 python setup.py install #install DeepMRSeg and its dependencies
 ```
 
-#### 2) Installation in conda environment
+### 2) Installation in conda environment
 ```
 conda create --name DeepMRSeg python=3.7.9
 conda activate DeepMRSeg
@@ -41,7 +41,7 @@ Then follow steps from [direct installation](#direct-installation-at-default-loc
 
 After installation of the package, users can call DeepMRSeg commands on the command prompt (or on Anaconda prompt).
 
-#### Pre-trained models:
+### Pre-trained models
 
 Pre-trained models for testing are hosted in [DeepMRSeg-Models repository](https://github.com/CBICA/DeepMRSeg-Models). Users can manually download a model from the model repository into a local folder.
 
@@ -51,7 +51,7 @@ Alternatively, the model can be downloaded to a pre-defined local folder (_~/.de
 deepmrseg_downloadmodel
 ```
 
-#### Training and testing:
+### Training and testing
 
 Users can train their own model using a custom training dataset (training):
 
@@ -67,7 +67,7 @@ deepmrseg_test
 
 Note that _deepmrseg_train_ and _deepmrseg_test_ are generic commands that allow users to run training and testing in an exhaustive way by supplying a set of user arguments.
 
-#### Applying a task:
+### Applying a task
 
 Alternatively, we provide a simplified interface for the application of a specific segmentation task on user data:
 
@@ -75,43 +75,55 @@ Alternatively, we provide a simplified interface for the application of a specif
 deepmrseg_apply
 ```
 
-Note that _deepmrseg_apply_ is a wrapper to _deepmrseg_test_, which calls it with a pre-defined model automatically downloaded using _deepmrseg_loadmodel_.
+Note that _deepmrseg_apply_ is a wrapper to _deepmrseg_test_, which calls it with a pre-defined model automatically downloaded using _deepmrseg_downloadmodel_.
 
-#### Examples:
+## Examples
 
 We provide here few examples using minimal argument sets as a quick reference. These examples also show 3 possible I/O options provided for different use cases (single subject, batch processing using an image list and batch processing of images in a folder).
 
-Please see the user manual (or call the command with the _-h_ option) for details of the complete command line arguments for _deepmrseg_train_ and _deepmrseg_test_.
+### Testing
+
+Quick application on single subject using the wrapper scripts and a pre-trained model:
 
 ```
-# Download pre-trained brainmask segmentation model
-deepmrseg_downloadmodel --task brainmask
+# Download the pre-trained ICV segmentation model
+deepmrseg_downloadmodel --model dlicv  
 
-# Download pre-trained WM lesion segmentation model
-deepmrseg_downloadmodel --task wmlesion
+# Segment image
+deepmrseg_apply --task dlicv --inImg subj1_T1.nii.gz --outImg subj1_T1_DLICV.nii.gz
+```
 
-# Process single subject (brain mask segmentation)
-deepmrseg_apply --task brainmask --inImg subj1_T1.nii.gz --outImg subj1_T1_BRAIN.nii.gz     
+Quick application for batch processing using an image list: 
 
-# Process single subject (WM lesion segmentation)
-#   WM lesion segmentation model requires both FL and T1 scans 
-#   Img names for different modalities are entered as repeated args in the same order
-#   used in model training
-deepmrseg_apply --task wmlesion --inImg subj1_FL.nii.gz --inImg subj1_T1.nii.gz --outImg subj1_T1_WMLES.nii.gz     
+```
+#   User provides a csv file with columns: ID,InputMod1,InputMod2,...,OutputImage
+deepmrseg_apply --task dlicv --sList subjectList.csv
+```
 
-# Batch processing of multiple subjects using a subject list
-#   User provides a csv file with columns: ID,InputT1,OutputImage
-deepmrseg_apply --task brainmask --sList subjectList.csv
+Quick application for batch processing of all images in a folder:
 
-# Batch processing of multiple subjects using a subject list
-#   WM lesion segmentation model requires both FL and T1 scans 
-#   User provides a csv file with columns: ID,InputFL,InputT1,OutputImage
-deepmrseg_apply --task wmlesion --sList subjectList.csv
-
-# Batch processing of multiple subjects in input folder 
+```
 #   Testing is applied individually to all images with the given suffix in the input folder
-deepmrseg_apply --task brainmask --inDir myindir --outDir myoutdir --inSuff _T1.nii.gz --outSuff _BRAIN
+deepmrseg_apply --task dlicv --inDir myindir --outDir myoutdir --inSuff _T1.nii.gz --outSuff _DLICV.nii.gz
+
 ```
+
+Segmentation using the deepmrseg_test command:
+```
+#    
+deepmrseg_test --mdldir my/path/to/pretrained/model --sList subjectList.csv
+```
+Please see the user manual (or call the command with the -h option) for details of the complete command line arguments for deepmrseg_test.
+
+### Training
+
+Training a new model using the deepmrseg_train command:
+```
+#    
+deepmrseg_train --sList subjectList.csv --mdlDir my/path/to/output/model 
+```
+Please see the user manual (or call the command with the -h option) for details of the complete command line arguments for deepmrseg_train.
+
 
 ## License
 

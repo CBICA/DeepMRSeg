@@ -45,10 +45,11 @@ def read_flags(argv):
   ## Apply single-modal segmentation task on single image (I/O OPTION 1)
   {prog} -m /my/models/bmask_mdldir --inImg sub1_T1.nii.gz --outImg sub1_bmaskseg.nii.gz
  
-  ## Apply multi-modal (FL and T1) segmentation task on single subject (I/O OPTION 1)
+  ## Apply multi-modal segmentation task on single subject (I/O OPTION 1)
   {prog} -m /my/models/wmlesion_mdldir --inImg sub1_FL.nii.gz --inImg sub1_T1.nii.gz --outImg sub1_wmlseg.nii.gz
 
   ## Apply multi-modal segmentation task on multiple images using an image list (I/O OPTION 2)
+  ## IMPORTANT NOTE: The order of input images should be the same as the one used in training
   {prog} -m /my/models/wmlesion_mdldir --sList my_img_list.csv
      with my_img_list.csv:
        ID,FLAIR,T1,OutImg
@@ -79,8 +80,9 @@ def read_flags(argv):
 	ioArgs1 = parser.add_argument_group( 'I/O OPTION 1', 'Single case processing')
 	ioArgs1.add_argument( "--inImg", action='append', default=None, type=str, \
 		help=	'Input image name. For multi-modal tasks, multiple image names \
-			can be entered as "--inImg imgMod1 --inImg imgMod2. \
-			Make sure the reference modality is provided first" (REQUIRED)')
+			can be entered as "--inImg imgMod1 --inImg imgMod2 ... . \
+			The order of input images should be the same as the one used \
+			in training." (REQUIRED)')
 	ioArgs1.add_argument( "--outImg", default=None, type=str, \
 		help=	'Output image name (REQUIRED)')
 
@@ -88,7 +90,8 @@ def read_flags(argv):
 	ioArgs2 = parser.add_argument_group( 'I/O OPTION 2', 'Batch processing using image list')
 	ioArgs2.add_argument( "--sList", default=None, type=str, \
 		help=	'Image list file name. Enter a comma separated list file with \
-			columns for: ID, input image(s) and output image (REQUIRED)')
+			columns for: ID, input image(s) and output image. The order of \
+			input images should be the same as the one used in training. (REQUIRED)')
 
 	## I/O Option3: Batch I/O from folder
 	ioArgs3 = parser.add_argument_group( 'I/O OPTION 3', 'Batch processing of all images in a folder  (works only for single-modality tasks)')
@@ -479,7 +482,7 @@ def _main_warg(argv):
 	if IOType == 3:
 		print( "\nInput dir \t: %s" % (FLAGS.inDir) )
 		print( "Output dir \t: %s" % (FLAGS.outDir) )
-		print( "Input suffix \t: %s" % (FLAGS.outDir) )
+		print( "Input suffix \t: %s" % (FLAGS.inSuff) )
 		print( "Output suffix \t: %s" % (FLAGS.outSuff) )
 	print("\nBatch Size \t: %s" % (FLAGS.batch))
 	print("Output probs \t: %d" % (FLAGS.probs))
@@ -713,6 +716,8 @@ def _main_warg(argv):
 		print("\n---->	Creating final predictions by combining output from each model")
 		_sys.stdout.flush()
 		
+		clInds = _np.array(roi_indices)[:,1]
+		
 		#WITH OPENFILE
 		with open(FLAGS.sList) as f:
 			reader = _csv.DictReader( f )
@@ -744,7 +749,8 @@ def _main_warg(argv):
 					#ENDIF
 
 					#FOR
-					for clInd in range(testconfigflags['num_classes']):
+					for i in range( len(roi_indices) ):
+						ind,clInd = roi_indices[i]
 
 						clSuff = '_probabilities_' + str(clInd)
 
@@ -768,15 +774,13 @@ def _main_warg(argv):
 							# Write probabilities
 							if FLAGS.probs:
 								outNii = _nib.Nifti1Image( probOut, niiTmp.affine, niiTmp.header )
-								outNii.to_filename( outImg.replace('.nii.gz', \
-												'_probabilities_' \
-												+ str(clInd) + '.nii.gz') )
+								outNii.to_filename(outImg.replace('.nii.gz', '_probabilities_' + str(clInd) + '.nii.gz'))
+						val_prob[:,:,:,ind] = probOut
 						#ENDIF
-						val_prob[:,:,:,clInd] = probOut
 					#ENDFOR
 
 					### Get preds from prob matrix
-					val_bin = _np.argmax( val_prob, axis=-1 )
+					val_bin = clInds[_np.argmax( val_prob, axis=-1 )]
 
 					# Write binary mask
 					outNii = _nib.Nifti1Image( val_bin, niiTmp.affine, niiTmp.header )

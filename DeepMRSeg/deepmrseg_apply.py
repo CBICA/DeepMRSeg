@@ -16,18 +16,14 @@ _os.environ['COLUMNS'] = "90"
 
 ##############################################################
 ## Path to saved models
-## FIXME: It would be better toread this from an external table hosted in model repo
 
 DEEPMRSEG = _os.path.expanduser(_os.path.join('~', '.deepmrseg'))
 MDL_DIR = _os.path.join(DEEPMRSEG, 'trained_models')
 
 modelDict = {}
-modelDict['hippocampus'] = _os.path.join(MDL_DIR, 'hippo', 'DeepMRSeg_Hippo_v0.0')
-modelDict['bmask'] = _os.path.join(MDL_DIR, 'bmask', 'DeepMRSeg_Bmask_v1.0')
 modelDict['dlicv'] = _os.path.join(MDL_DIR, 'dlicv', 'DeepMRSeg_DLICV_v1.0')
+modelDict['muse'] = _os.path.join(MDL_DIR, 'muse', 'DeepMRSeg_MUSE_v1.0')
 modelDict['tissueseg'] = _os.path.join(MDL_DIR, 'tissueseg', 'DeepMRSeg_TissueSeg_v1.0')
-modelDict['roiseg'] = _os.path.join(MDL_DIR, 'roiseg', 'DeepMRSeg_ROISeg_v1.0')
-modelDict['wmlesion'] = _os.path.join(MDL_DIR, 'roiseg', 'DeepMRSeg_WMLes_v1.0')
 
 ##############################################################
 
@@ -43,35 +39,29 @@ def read_flags(argv):
 
 	epilogTxt = '''Examples:
 	
-  ## Apply bmask model on single image (I/O OPTION 1)
-  deepmrseg_downloadmodel --model bmask
-  {prog} --task bmask --inImg sub1_T1.nii.gz --outImg sub1_bmaskseg.nii.gz
+  ## Apply dlicv model on single image (I/O OPTION 1)
+  deepmrseg_downloadmodel --model dlicv
+  {prog} --task dlicv --inImg sub1_T1.nii.gz --outImg sub1_DLICV.nii.gz
  
-  ## Apply wmlesion model (multi-modal with FL and T1 images)  on single subject (I/O OPTION 1)
-  deepmrseg_downloadmodel --model wmlesion
-  {prog} --task wmlesion --inImg sub1_FL.nii.gz --inImg sub1_T1.nii.gz --outImg sub1_wmlseg.nii.gz
-
-  ## Apply wmlesion model on multiple subjects using an image list (I/O OPTION 2)
-  deepmrseg_downloadmodel --model wmlesion
-  {prog} --task wmlesion --sList my_img_list.csv
+  ## Apply dlicv model on multiple subjects using an image list (I/O OPTION 2)
+  {prog} --task dlicv --sList my_img_list.csv
      with my_img_list.csv:
-       ID,FLAIR,T1,OutImg
-       sub1,/my/indir/sub1_FL.nii.gz,/my/indir/sub1_T1.nii.gz,/my/outdir/sub1_wmlseg.nii.gz
-       sub2,/my/indir/sub2_FL.nii.gz,/my/indir/sub2_T1.nii.gz,/my/outdir/sub2_wmlseg.nii.gz
+       ID,T1,OutImg
+       sub1,/my/indir/sub1_T1.nii.gz,/my/outdir/sub1_DLICV.nii.gz
+       sub2,/my/indir/sub2_T1.nii.gz,/my/outdir/sub2_DLICV.nii.gz
        ...
      
-  ## Apply roiseg model on all T1 images in the input folder (I/O OPTION 3)
-  deepmrseg_downloadmodel --model roiseg
-  {prog} --task roiseg --inDir /my/indir --outDir /my/outdir --inSuff _T1.nii.gz --outSuff _roiseg.nii.gz
+  ## Apply dlicv model on all T1 images in the input folder (I/O OPTION 3)
+  {prog} --task dlicv --inDir /my/indir --outDir /my/outdir --inSuff _T1.nii.gz --outSuff _DLICV.nii.gz
  
   '''.format(prog=exeName)
 
 	parser = _argparse.ArgumentParser( formatter_class=_argparse.RawDescriptionHelpFormatter, \
 		description=descTxt, epilog=epilogTxt )
 
-#	TASK
+#	TASK/MODEL
 #	===========
-	dirArgs = parser.add_argument_group( 'TASK')
+	dirArgs = parser.add_argument_group( 'MODEL')
 	dirArgs.add_argument( "--task", default=None, type=str, \
 		help=	'Name of the segmentation task. Options are: ' \
 			+ '[' + ', '.join(modelDict.keys()) + ']. (REQUIRED)')
@@ -111,8 +101,8 @@ def read_flags(argv):
 #	===========
 	otherArgs = parser.add_argument_group( 'OTHER OPTIONS')
 
-	otherArgs.add_argument( "--batch", default=64, type=int, \
-		help="Batch size  (default: 64)" )
+	otherArgs.add_argument( "--batch", default=None, type=int, \
+		help="Batch size  (default: Depends on the task)" )
 
 	otherArgs.add_argument( "--probs", default=False, action="store_true", \
 		help=	'Flag to indicate whether to save a probability map for \
@@ -141,7 +131,7 @@ def verify_flags(FLAGS, parser):
 	### Check required args
 	if FLAGS.task is None:
 		parser.print_help(_sys.stderr)
-		print('ERROR: Missing required arg --task')
+		print('ERROR: Missing required arg --model')
 		_sys.exit(1)
 
 	if FLAGS.task not in modelDict.keys():
@@ -184,39 +174,40 @@ def _main():
 	FLAGS,parser = read_flags(argv)
 	verify_flags(FLAGS, parser)
 
-	if FLAGS.task == 'bmask':
-		print('Model for task not trained yet, aborting: ' + FLAGS.task)
-		_sys.exit(1)
-
 	if FLAGS.task == 'tissueseg':
-		print('Model for task not trained yet, aborting: ' + FLAGS.task)
-		_sys.exit(1)
-
-	if FLAGS.task == 'roiseg':
-		print('Model for task not trained yet, aborting: ' + FLAGS.task)
-		_sys.exit(1)
-		
-	if FLAGS.task == 'wmlesion':
-		print('Model for task not trained yet, aborting: ' + FLAGS.task)
-		_sys.exit(1)
-
-	if FLAGS.task == 'hippocampus':
-		
-		## Add models in 3 orientation		
+		## Add models in 1 orientation only
 		argv = argv[3:]
 		argv.append('--mdlDir')
 		argv.append(_os.path.join(modelDict[FLAGS.task], 'LPS'))
-		argv.append('--mdlDir')
-		argv.append(_os.path.join(modelDict[FLAGS.task], 'PSL'))
-		argv.append('--mdlDir')
-		argv.append(_os.path.join(modelDict[FLAGS.task], 'SLP'))
 		print(argv)
 		#print(argsExt)
 		
 		print('Calling deepmrseg_test')
 		deepmrseg_test._main_warg(argv0 + argv)
+		
+	if FLAGS.task == 'muse':
+		## Add models in 1 orientation only
+		argv = argv[3:]
+		argv.append('--mdlDir')
+		argv.append(_os.path.join(modelDict[FLAGS.task], 'LPS'))
+		print(argv)
+		#print(argsExt)
+		
+		## Set batch size to small value to reduce memory usage
+		if FLAGS.batch == None:
+			argv.append('--batch')
+			argv.append('4')
+			print('WARNING: Batch size set to 4 to reduce memory usage!')
+			_sys.stdout.flush()
+		
+		print('Calling deepmrseg_test')
+		deepmrseg_test._main_warg(argv0 + argv)
+		
+	if FLAGS.task == 'wmlesion':
+		print('Model for task not trained yet, aborting: ' + FLAGS.task)
+		_sys.exit(1)
 
-	if FLAGS.task == 'DLICV':
+	if FLAGS.task == 'dlicv':
 		
 		## Add models in 3 orientation		
 		argv = argv[3:]
