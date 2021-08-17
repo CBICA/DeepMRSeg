@@ -22,6 +22,7 @@ It may also work on other platforms.
 -   If you prefer conda, you may install it from [here](https://www.anaconda.com/products/individual)
 
 ## Installation Instructions
+To setup your GPU for use with tensorflow, please follow the tensorflow guide for [GPU support](https://www.tensorflow.org/install/gpu). Alternatively, you can also use a tensorflow [Docker container](https://www.tensorflow.org/install/docker).
 
 ### 1) Direct installation at default location 
 ```
