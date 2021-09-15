@@ -20,7 +20,7 @@ setuptools.setup(
 	install_requires=[
 	'scipy==1.5.4',
 	'matplotlib==3.3.3',
-	'tensorflow==2.3.4',
+	'tensorflow==2.3.3',
 	'tensorflow-addons==0.13.0',
 	'dill==0.3.4',
 	'h5py==2.10.0',
