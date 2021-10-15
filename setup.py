@@ -3,15 +3,23 @@
 __author__ 	= 'Ashish Singh'
 
 import setuptools
+import sys
 
 with open("README.md", "r") as fh:
     long_description = fh.read()
+
+if sys.version_info >= (3, 9, 0):
+	sys.exit('Python versions 3.9 and higher are not supported.')
+
+if sys.version_info < (3, 6):
+	sys.exit('Python version prior to 3.6 are not supported.')
 
 setuptools.setup(
     name="DeepMRSeg",
     version="0.1.0",
     author="Jimit Doshi",
     author_email="software@cbica.upenn.edu",
+	python_requires=">=3.6",
     description="Deep Learning based MR image Segmentation",
     long_description=long_description,
     long_description_content_type="text/markdown",
@@ -38,7 +46,9 @@ setuptools.setup(
     'console_scripts': ['deepmrseg_train=DeepMRSeg.deepmrseg_train:_main', 'deepmrseg_test=DeepMRSeg.deepmrseg_test:_main', 'deepmrseg_downloadmodel=DeepMRSeg.deepmrseg_downloadmodel:_main', 'deepmrseg_apply=DeepMRSeg.deepmrseg_apply:_main'],
     },
     classifiers=(
-        "Programming Language :: Python :: 3",
+		"Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
+        "Programming Language :: Python :: 3.8",
         "Operating System :: OS Independent",
     ),
 )
