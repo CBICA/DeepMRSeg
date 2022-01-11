@@ -43,14 +43,14 @@ def read_flags(argv):
 	epilogTxt = '''Examples:
 	
   ## Apply single-modal segmentation task on single image (I/O OPTION 1)
-  {prog} -m /my/models/bmask_mdldir --inImg sub1_T1.nii.gz --outImg sub1_bmaskseg.nii.gz
+  {prog} --mdlDir /my/models/bmask_mdldir --inImg sub1_T1.nii.gz --outImg sub1_bmaskseg.nii.gz
  
   ## Apply multi-modal segmentation task on single subject (I/O OPTION 1)
-  {prog} -m /my/models/wmlesion_mdldir --inImg sub1_FL.nii.gz --inImg sub1_T1.nii.gz --outImg sub1_wmlseg.nii.gz
+  {prog} --mdlDir /my/models/wmlesion_mdldir --inImg sub1_FL.nii.gz --inImg sub1_T1.nii.gz --outImg sub1_wmlseg.nii.gz
 
   ## Apply multi-modal segmentation task on multiple images using an image list (I/O OPTION 2)
   ## IMPORTANT NOTE: The order of input images should be the same as the one used in training
-  {prog} -m /my/models/wmlesion_mdldir --sList my_img_list.csv
+  {prog} --mdlDir /my/models/wmlesion_mdldir --sList my_img_list.csv
      with my_img_list.csv:
        ID,FLAIR,T1,OutImg
        sub1,/my/indir/sub1_FL.nii.gz,/my/indir/sub1_T1.nii.gz,/my/outdir/sub1_wmlseg.nii.gz
@@ -58,10 +58,10 @@ def read_flags(argv):
        ...
      
   ## Apply single-modal segmentation task on multiple images within a folder (I/O OPTION 3)
-  {prog} -m /my/models/bmask_mdldir --inDir /my/indir --outDir /my/outdir --inSuff _T1.nii.gz --outSuff _bmaskseg.nii.gz
+  {prog} --mdlDir /my/models/bmask_mdldir --inDir /my/indir --outDir /my/outdir --inSuff _T1.nii.gz --outSuff _bmaskseg.nii.gz
  
   ## Apply multiple models and combine segmentations
-  {prog} -m /my/models/bmask_mdldir1 -m /my/models/bmask_mdldir2 ... [I/O OPTIONS]
+  {prog} --mdlDir /my/models/bmask_mdldir1 -m /my/models/bmask_mdldir2 ... [I/O OPTIONS]
   
   '''.format(prog=exeName)
 
